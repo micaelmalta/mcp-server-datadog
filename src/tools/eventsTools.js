@@ -1,5 +1,3 @@
-import { EventsClient } from "../clients/eventsClient.js";
-
 /**
  * Tool definitions and handlers for Datadog Events API.
  * Provides tools to search events and get detailed event information.

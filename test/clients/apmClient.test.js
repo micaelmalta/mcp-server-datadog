@@ -4,7 +4,6 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { ApmClient } from "#clients/apmClient.js";
-import { DatadogClientError } from "#utils/errors.js";
 import {
   mockSuccess,
   mockError,
@@ -659,7 +658,7 @@ describe("ApmClient", () => {
     it("should handle 401 unauthorized", async () => {
       mockError({ status: 401, message: "Unauthorized" });
 
-      const { data, error } = await client.queryTraces(
+      const { data: _data, error } = await client.queryTraces(
         "service:api",
         timestamps.fromMs,
         timestamps.toMs
@@ -671,7 +670,7 @@ describe("ApmClient", () => {
     it("should handle 403 forbidden", async () => {
       mockError({ status: 403, message: "Forbidden" });
 
-      const { data, error } = await client.getServiceHealth(
+      const { data: _data, error } = await client.getServiceHealth(
         "api",
         timestamps.fromMs,
         timestamps.toMs
@@ -686,7 +685,7 @@ describe("ApmClient", () => {
         message: "Too Many Requests",
       });
 
-      const { data, error } = await client.queryTraces(
+      const { data: _data, error } = await client.queryTraces(
         "service:api",
         timestamps.fromMs,
         timestamps.toMs
@@ -698,7 +697,7 @@ describe("ApmClient", () => {
     it("should handle 500 server error", async () => {
       mockError({ status: 500, message: "Internal Server Error" });
 
-      const { data, error } = await client.listServices();
+      const { data: _data, error } = await client.listServices();
 
       expect(error.statusCode).toBe(500);
     });
@@ -710,7 +709,7 @@ describe("ApmClient", () => {
         errorData: { errors: ["Invalid filter"] },
       });
 
-      const { data, error } = await client.queryTraces(
+      const { data: _data, error } = await client.queryTraces(
         "service:api",
         timestamps.fromMs,
         timestamps.toMs

@@ -4,7 +4,6 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { EventsClient } from "#clients/eventsClient.js";
-import { DatadogClientError } from "#utils/errors.js";
 import {
   mockSuccess,
   mockError,
@@ -531,7 +530,7 @@ describe("EventsClient", () => {
     it("should handle 401 unauthorized", async () => {
       mockError({ status: 401, message: "Unauthorized" });
 
-      const { data, error } = await client.searchEvents(
+      const { data: _data, error } = await client.searchEvents(
         "priority:high",
         timestamps.from,
         timestamps.to
@@ -543,7 +542,7 @@ describe("EventsClient", () => {
     it("should handle 403 forbidden", async () => {
       mockError({ status: 403, message: "Forbidden" });
 
-      const { data, error } = await client.searchEvents(
+      const { data: _data, error } = await client.searchEvents(
         "priority:high",
         timestamps.from,
         timestamps.to
@@ -558,7 +557,7 @@ describe("EventsClient", () => {
         message: "Too Many Requests",
       });
 
-      const { data, error } = await client.searchEvents(
+      const { data: _data, error } = await client.searchEvents(
         "priority:high",
         timestamps.from,
         timestamps.to
@@ -570,7 +569,7 @@ describe("EventsClient", () => {
     it("should handle 500 server error", async () => {
       mockError({ status: 500, message: "Internal Server Error" });
 
-      const { data, error } = await client.searchEvents(
+      const { data: _data, error } = await client.searchEvents(
         "priority:high",
         timestamps.from,
         timestamps.to
@@ -586,7 +585,7 @@ describe("EventsClient", () => {
         errorData: { errors: ["Invalid query"] },
       });
 
-      const { data, error } = await client.searchEvents(
+      const { data: _data, error } = await client.searchEvents(
         "invalid:",
         timestamps.from,
         timestamps.to

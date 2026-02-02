@@ -2,11 +2,10 @@
  * Tests for Datadog Metrics API client.
  */
 
-import "#test/mocks/datadogApi.js";
+import { mockDatadogApi } from "#test/mocks/datadogApi.js";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { MetricsClient } from "#clients/metricsClient.js";
 import { DatadogClientError } from "#utils/errors.js";
-import { mockDatadogApi } from "#test/mocks/datadogApi.js";
 import {
   createMockConfig,
   createTestTimestamps,
@@ -475,7 +474,7 @@ describe("MetricsClient", () => {
       const err = Object.assign(new Error("Unauthorized"), { statusCode: 401 });
       metricsApi.queryMetrics.mockRejectedValue(err);
 
-      const { data, error } = await client.queryMetrics(
+      const { data: _data, error } = await client.queryMetrics(
         "avg:system.cpu{*}",
         timestamps.from,
         timestamps.to
@@ -489,7 +488,7 @@ describe("MetricsClient", () => {
       const err = Object.assign(new Error("Forbidden"), { statusCode: 403 });
       metricsApi.queryMetrics.mockRejectedValue(err);
 
-      const { data, error } = await client.queryMetrics(
+      const { data: _data, error } = await client.queryMetrics(
         "avg:system.cpu{*}",
         timestamps.from,
         timestamps.to
@@ -502,7 +501,7 @@ describe("MetricsClient", () => {
       const rawError = Object.assign(new Error("Bad Request"), { statusCode: 400 });
       metricsApi.queryMetrics.mockRejectedValue(rawError);
 
-      const { data, error } = await client.queryMetrics(
+      const { data: _data, error } = await client.queryMetrics(
         "invalid query",
         timestamps.from,
         timestamps.to

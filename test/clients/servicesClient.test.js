@@ -33,7 +33,7 @@ describe("ServicesClient", () => {
       appKey: "test-app-key",
     });
 
-    const { data, error } = await testClient.getServiceDependencies({});
+    const { data: _data, error } = await testClient.getServiceDependencies({});
     expect(error).toBeDefined();
     expect(error.message).toContain("Environment (env) is required");
   });
@@ -49,7 +49,7 @@ describe("ServicesClient", () => {
       error: new DatadogClientError("API Error", 500),
     });
 
-    const { data, error } = await testClient.getServiceDependencies({ env: "production" });
+    const { data: _data, error } = await testClient.getServiceDependencies({ env: "production" });
     expect(error).toBeDefined();
     expect(error.message).toContain("API Error");
   });

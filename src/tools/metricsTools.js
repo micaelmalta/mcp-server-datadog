@@ -1,5 +1,3 @@
-import { MetricsClient } from "../clients/metricsClient.js";
-
 /**
  * Tool definitions and handlers for Datadog Metrics API.
  * Provides tools to query metrics, get metadata, and list available metrics.

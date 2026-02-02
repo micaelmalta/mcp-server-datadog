@@ -4,7 +4,6 @@
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { MonitorsClient } from "#clients/monitorsClient.js";
-import { DatadogClientError } from "#utils/errors.js";
 import { mockDatadogApi } from "#test/mocks/datadogApi.js";
 import {
   createMockConfig,
@@ -484,7 +483,7 @@ describe("MonitorsClient", () => {
       const err = Object.assign(new Error("Unauthorized"), { statusCode: 401 });
       monitorsApi.listMonitors.mockRejectedValue(err);
 
-      const { data, error } = await client.listMonitors();
+      const { data: _data, error } = await client.listMonitors();
 
       expect(error.statusCode).toBe(401);
     });
@@ -493,7 +492,7 @@ describe("MonitorsClient", () => {
       const err = Object.assign(new Error("Forbidden"), { statusCode: 403 });
       monitorsApi.listMonitors.mockRejectedValue(err);
 
-      const { data, error } = await client.listMonitors();
+      const { data: _data, error } = await client.listMonitors();
 
       expect(error.statusCode).toBe(403);
     });
@@ -504,7 +503,7 @@ describe("MonitorsClient", () => {
       });
       monitorsApi.getMonitor.mockRejectedValue(err);
 
-      const { data, error } = await client.getMonitor(1234567);
+      const { data: _data, error } = await client.getMonitor(1234567);
 
       expect(error.statusCode).toBe(429);
     });
@@ -515,7 +514,7 @@ describe("MonitorsClient", () => {
       });
       monitorsApi.listMonitors.mockRejectedValue(err);
 
-      const { data, error } = await client.listMonitors();
+      const { data: _data, error } = await client.listMonitors();
 
       expect(error.statusCode).toBe(500);
     });
@@ -526,7 +525,7 @@ describe("MonitorsClient", () => {
       });
       monitorsApi.listMonitors.mockRejectedValue(rawError);
 
-      const { data, error } = await client.listMonitors();
+      const { data: _data, error } = await client.listMonitors();
 
       expect(error.originalError).toBe(rawError);
     });

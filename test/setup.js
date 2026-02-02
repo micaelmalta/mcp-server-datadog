@@ -1,5 +1,5 @@
 import { config } from "dotenv";
-import { beforeEach, afterEach, vi } from "vitest";
+import { beforeEach, afterEach } from "vitest";
 import { installMockFetch, clearMocks } from "./helpers.js";
 import "./mocks/datadogApi.js";
 

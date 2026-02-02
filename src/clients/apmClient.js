@@ -243,7 +243,7 @@ export class ApmClient {
       const delayMs = 600;
       for (let i = 0; i < traceIdList.length; i++) {
         const traceId = traceIdList[i];
-        if (i > 0) await new Promise((r) => setTimeout(r, delayMs));
+        if (i > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
         let traceSpans = [];
         for (const traceFilter of traceFilterVariants(traceId)) {
           try {

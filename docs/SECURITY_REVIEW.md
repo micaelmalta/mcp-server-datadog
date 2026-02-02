@@ -79,12 +79,12 @@ The server runs as an MCP process over stdio, loads Datadog API keys from enviro
 
 ## Remediations applied (2026-02-02)
 
-| Finding | Remediation |
-|--------|-------------|
-| **High – full error in logs** | `src/index.js`: tool and fatal error handlers now log only `error.message` (no full object or stack). |
-| **Medium – metric filter** | `src/tools/metricsTools.js`: filter must not contain `{` or `}`; metricName trimmed and validated. |
-| **Medium – log ID** | `src/clients/logsClient.js`: `getLogDetails` validates logId format (alphanumeric, hyphen, underscore; max 512 chars). |
-| **Medium – monitor ID** | `src/clients/monitorsClient.js`: `getMonitorGroups` validates monitorId is a non-negative finite number. |
-| **Medium – event tags** | `src/clients/eventsClient.js`: `searchEventsByTags` validates each tag (no embedded ` AND ` / ` OR `; max 256 chars). |
-| **Low – Logger secrets** | `src/utils/logger.js`: `Logger.log` redacts known keys (`apiKey`, `appKey`, `password`, `secret`, `token`) when serializing data. |
-| **Low – log file / rate limiting** | `README.md`: added “Operational notes” (log file location, rate limiting). |
+| Finding                            | Remediation                                                                                                                       |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **High – full error in logs**      | `src/index.js`: tool and fatal error handlers now log only `error.message` (no full object or stack).                             |
+| **Medium – metric filter**         | `src/tools/metricsTools.js`: filter must not contain `{` or `}`; metricName trimmed and validated.                                |
+| **Medium – log ID**                | `src/clients/logsClient.js`: `getLogDetails` validates logId format (alphanumeric, hyphen, underscore; max 512 chars).            |
+| **Medium – monitor ID**            | `src/clients/monitorsClient.js`: `getMonitorGroups` validates monitorId is a non-negative finite number.                          |
+| **Medium – event tags**            | `src/clients/eventsClient.js`: `searchEventsByTags` validates each tag (no embedded `AND` / `OR`; max 256 chars).                 |
+| **Low – Logger secrets**           | `src/utils/logger.js`: `Logger.log` redacts known keys (`apiKey`, `appKey`, `password`, `secret`, `token`) when serializing data. |
+| **Low – log file / rate limiting** | `README.md`: added “Operational notes” (log file location, rate limiting).                                                        |

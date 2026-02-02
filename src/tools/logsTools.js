@@ -1,5 +1,3 @@
-import { LogsClient } from "../clients/logsClient.js";
-
 /**
  * Tool definitions and handlers for Datadog Logs API.
  * Provides tools to search logs, get details, and aggregate log data.

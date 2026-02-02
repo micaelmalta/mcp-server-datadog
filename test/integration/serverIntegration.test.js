@@ -240,7 +240,7 @@ describe("MCP Server Integration", () => {
       mockError({ status: 429, message: "Too Many Requests" });
 
       const client = new MetricsClient(config);
-      const { data, error } = await client.queryMetrics(
+      const { data: _data, error } = await client.queryMetrics(
         "system.cpu",
         timestamps.from,
         timestamps.to
@@ -254,7 +254,7 @@ describe("MCP Server Integration", () => {
       mockError({ status: 500, message: "Internal Server Error" });
 
       const client = new LogsClient(config);
-      const { data, error } = await client.searchLogs(
+      const { data: _data, error } = await client.searchLogs(
         "service:api",
         timestamps.fromMs,
         timestamps.toMs
@@ -453,7 +453,7 @@ describe("MCP Server Integration", () => {
       mockSuccess(metricsQueryResponse);
       const client = new MetricsClient(config);
 
-      const { data, error } = await client.queryMetrics(
+      const { data: _data, error } = await client.queryMetrics(
         "system.cpu",
         timestamps.from,
         timestamps.to
@@ -466,7 +466,7 @@ describe("MCP Server Integration", () => {
       mockSuccess(logsSearchResponse);
       const client = new LogsClient(config);
 
-      const { data, error } = await client.searchLogs(
+      const { data: _data, error } = await client.searchLogs(
         "service:api",
         timestamps.fromMs,
         timestamps.toMs

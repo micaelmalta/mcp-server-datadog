@@ -45,7 +45,7 @@ function registerTools(server, clients) {
   // Register tools with server and build handler map
   for (const tool of allTools) {
     // Extract handler function (don't include in tool definition)
-    const { handler, ...toolDef } = tool;
+    const { handler, ..._toolDef } = tool;
 
     // Map tool name to handler
     toolMap.set(tool.name, handler);
@@ -123,7 +123,7 @@ async function main() {
 
   // Create tool definitions without handlers for the MCP protocol
   const toolDefinitions = allTools.map((tool) => {
-    const { handler, ...toolDef } = tool;
+    const { handler: _handler, ...toolDef } = tool;
     return toolDef;
   });
 

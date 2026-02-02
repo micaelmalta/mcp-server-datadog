@@ -1,5 +1,3 @@
-import { MonitorsClient } from "../clients/monitorsClient.js";
-
 /**
  * Tool definitions and handlers for Datadog Monitors API.
  * Provides tools to list, search, and get status of monitors.

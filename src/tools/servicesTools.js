@@ -1,5 +1,3 @@
-import { ServicesClient } from "../clients/servicesClient.js";
-
 /**
  * Tool definitions and handlers for Datadog Service Dependencies API.
  * Provides tools to explore service dependencies and relationships.

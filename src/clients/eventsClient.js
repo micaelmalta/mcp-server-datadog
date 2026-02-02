@@ -48,7 +48,7 @@ export class EventsClient {
         };
       }
 
-      const pageSize = Math.min(options.pageSize || 10, 100);
+      const _pageSize = Math.min(options.pageSize || 10, 100);
 
       const result = await this.eventsApi.listEvents({
         start: Math.floor(from),

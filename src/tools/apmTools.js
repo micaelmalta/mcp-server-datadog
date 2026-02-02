@@ -1,5 +1,3 @@
-import { ApmClient } from "../clients/apmClient.js";
-
 /**
  * Tool definitions and handlers for Datadog APM/Traces API.
  * Provides tools to query traces and get service health and dependency information.

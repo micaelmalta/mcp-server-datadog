@@ -5,8 +5,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { getLogsTools } from "#tools/logsTools.js";
 import {
-  mockSuccess,
-  mockError,
   clearMocks,
   createTestTimestamps,
   MockApiClient,

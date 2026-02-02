@@ -7,6 +7,12 @@
  * Mock fetch responses for testing.
  * Stores mock responses to be returned by fetch calls.
  */
+/**
+ * Import Vitest functions for use in this module.
+ * This is needed since helpers module needs to use vi mock functions.
+ */
+import { vi } from "vitest";
+
 let mockFetchResponse = null;
 let mockFetchError = null;
 
@@ -79,7 +85,7 @@ export function mockNetworkError() {
  * This should be called in test setup.
  */
 export function installMockFetch() {
-  globalThis.fetch = vi.fn(async (url, options) => {
+  globalThis.fetch = vi.fn(async (_url, _options) => {
     if (mockFetchError) {
       throw mockFetchError;
     }
@@ -230,9 +236,3 @@ export class MockApiClient {
     return response || { data: null, error: null };
   }
 }
-
-/**
- * Import Vitest functions for use in this module.
- * This is needed since helpers module needs to use vi mock functions.
- */
-import { vi } from "vitest";

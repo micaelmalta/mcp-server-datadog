@@ -78,7 +78,7 @@ export class MonitorsClient {
    * @param {number} options.to - Unix timestamp (seconds) for end time
    * @returns {Promise<{data: Object, error: null} | {data: null, error: Error}>}
    */
-  async getMonitorStatus(monitorId, options = {}) {
+  async getMonitorStatus(monitorId, _options = {}) {
     try {
       if (!monitorId && monitorId !== 0) {
         return {
@@ -138,7 +138,7 @@ export class MonitorsClient {
    * @param {number} options.pageSize - Number of results (default: 10)
    * @returns {Promise<{data: Object, error: null} | {data: null, error: Error}>}
    */
-  async searchMonitors(query, options = {}) {
+  async searchMonitors(query, _options = {}) {
     try {
       if (!query) {
         return {

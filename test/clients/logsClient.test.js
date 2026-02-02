@@ -4,7 +4,6 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { LogsClient } from "#clients/logsClient.js";
-import { DatadogClientError } from "#utils/errors.js";
 import {
   mockSuccess,
   mockError,
@@ -180,7 +179,7 @@ describe("LogsClient", () => {
         errorData: { errors: ["Rate limit exceeded"] },
       });
 
-      const { data, error } = await client.searchLogs(
+      const { data: _data, error } = await client.searchLogs(
         "service:api",
         timestamps.fromMs,
         timestamps.toMs
@@ -572,7 +571,7 @@ describe("LogsClient", () => {
         errorData: { errors: ["Insufficient permissions"] },
       });
 
-      const { data, error } = await client.listIndexes();
+      const { data: _data, error } = await client.listIndexes();
 
       expect(error.originalError).toBeDefined();
     });

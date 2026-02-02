@@ -3,6 +3,8 @@
  * Provides tools to list, search, and get status of monitors.
  */
 
+import { formatToolError } from "#utils/toolErrors.js";
+
 /**
  * List Monitors tool definition.
  * Lists monitors with optional filters for status and tags.
@@ -13,6 +15,10 @@ const listMonitorsTool = {
   description:
     "List all Datadog monitors with optional filtering by status and tags. " +
     "Useful for getting an overview of all monitors in your account.",
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
   inputSchema: {
     type: "object",
     properties: {
@@ -46,6 +52,10 @@ const getMonitorStatusTool = {
   description:
     "Get detailed status information for a specific monitor, including " +
     "alert status, downtime information, and historical state changes.",
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
   inputSchema: {
     type: "object",
     properties: {
@@ -68,6 +78,10 @@ const searchMonitorsTool = {
   description:
     "Search for monitors by name or other criteria. Useful for finding " +
     "specific monitors when you don't remember the exact ID.",
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
   inputSchema: {
     type: "object",
     properties: {
@@ -138,12 +152,13 @@ async function handleListMonitors(input, client) {
         content: [
           {
             type: "text",
-            text: `Error listing monitors: ${error.message}`,
+            text: `Error listing monitors: ${formatToolError(error.message, error?.statusCode)}`,
           },
         ],
       };
     }
 
+    const monitors = Array.isArray(data) ? data : [];
     return {
       isError: false,
       content: [
@@ -155,8 +170,10 @@ async function handleListMonitors(input, client) {
                 status: input.status || "any",
                 tags: input.tags || [],
               },
-              monitorsCount: data.length || 0,
-              monitors: data,
+              count: monitors.length,
+              monitorsCount: monitors.length,
+              monitors,
+              has_more: false,
             },
             null,
             2
@@ -171,7 +188,7 @@ async function handleListMonitors(input, client) {
       content: [
         {
           type: "text",
-          text: `Error: ${error.message}`,
+          text: `Error: ${formatToolError(error?.message ?? String(error), error?.statusCode)}`,
         },
       ],
     };
@@ -217,7 +234,7 @@ async function handleGetMonitorStatus(input, client) {
         content: [
           {
             type: "text",
-            text: `Error retrieving monitor status: ${error.message}`,
+            text: `Error retrieving monitor status: ${formatToolError(error.message, error?.statusCode)}`,
           },
         ],
       };
@@ -246,7 +263,7 @@ async function handleGetMonitorStatus(input, client) {
       content: [
         {
           type: "text",
-          text: `Error: ${error.message}`,
+          text: `Error: ${formatToolError(error?.message ?? String(error), error?.statusCode)}`,
         },
       ],
     };
@@ -285,7 +302,7 @@ async function handleSearchMonitors(input, client) {
         content: [
           {
             type: "text",
-            text: `Error searching monitors: ${error.message}`,
+            text: `Error searching monitors: ${formatToolError(error.message, error?.statusCode)}`,
           },
         ],
       };
@@ -326,7 +343,7 @@ async function handleSearchMonitors(input, client) {
       content: [
         {
           type: "text",
-          text: `Error: ${error.message}`,
+          text: `Error: ${formatToolError(error?.message ?? String(error), error?.statusCode)}`,
         },
       ],
     };

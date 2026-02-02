@@ -1,266 +1,324 @@
-# mcp_datadog - CLAUDE.md
+# CLAUDE.md
 
-Project-specific guidance for Claude Code when working with the MCP Datadog server.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-MCP Datadog is a Node.js/JavaScript Model Context Protocol server that integrates Datadog APIs with AI tools. It provides clients for metrics, logs, events, monitors, and APM/traces APIs.
+MCP Datadog is a Node.js Model Context Protocol (MCP) server that exposes Datadog monitoring APIs to AI assistants. It provides tools for querying metrics, logs, events, monitors, APM traces, and service dependencies.
 
 ## Tech Stack
 
 - **Runtime**: Node.js 20.20.0+ (ES modules)
 - **Language**: JavaScript with JSDoc type hints (NO TypeScript)
-- **Framework**: @modelcontextprotocol/sdk
-- **Testing**: Vitest
-- **Linting**: ESLint + Prettier
-- **Reference Projects**: hq-bff, cs-api (for Node.js patterns)
+- **MCP Framework**: @modelcontextprotocol/sdk
+- **Datadog SDK**: @datadog/datadog-api-client
+- **Testing**: Vitest with SDK mocks
+- **Linting**: ESLint (standard config) + Prettier
 
-## Project Structure
+## Architecture
 
-```
-mcp_datadog/
-├── src/
-│   ├── clients/          # Datadog API clients
-│   │   ├── metricsClient.js
-│   │   ├── logsClient.js
-│   │   ├── eventsClient.js
-│   │   ├── monitorsClient.js
-│   │   └── apmClient.js
-│   ├── tools/            # MCP tool handlers (to be added)
-│   ├── utils/
-│   │   ├── environment.js
-│   │   ├── errors.js
-│   │   └── apiClient.js
-│   └── index.js          # Server entry point
-├── test/
-│   ├── fixtures/
-│   │   └── datadogResponses.js
-│   └── setup.js
-├── docs/
-├── package.json
-├── jsconfig.json         # Path aliases
-├── vitest.config.js
-└── .eslintrc.js
-```
+### Three-layer Architecture
 
-## Key Patterns
+1. **Clients** (`src/clients/`) - SDK wrappers for Datadog APIs
+   - Use official @datadog/datadog-api-client SDK
+   - Return `{ data, error }` tuples (never throw)
+   - Validate inputs before API calls
+   - Transform SDK responses to consistent format
 
-### Path Aliases (jsconfig.json)
+2. **Tools** (`src/tools/`) - MCP tool definitions and handlers
+   - Define tool schemas (name, description, inputSchema)
+   - Include handler function that uses client
+   - Format errors with actionable hints via `formatToolError()`
+   - Return MCP-compliant responses
+
+3. **Server** (`src/index.js`) - MCP server initialization
+   - Initialize all clients with config
+   - Register tools with MCP SDK
+   - Handle tool calls with timing/logging
+   - Log to stderr as JSON lines for observability
+
+### Path Aliases
+
+All imports use path aliases defined in jsconfig.json and vitest.config.js:
 
 ```javascript
-import { ... } from "#utils/environment.js";
-import { ... } from "#clients/metricsClient.js";
-import { ... } from "#tools/...";
-import { ... } from "#test/fixtures/...";
+import { formatToolError } from "#utils/toolErrors.js";
+import { MetricsClient } from "#clients/metricsClient.js";
+import { getMetricsTools } from "#tools/metricsTools.js";
+import { mockDatadogApi } from "#test/mocks/datadogApi.js";
 ```
 
-### Error Handling Pattern
+### Client Pattern
 
-All API methods return `{ data, error }` tuples:
+Clients wrap Datadog SDK APIs and return `{ data, error }` tuples:
 
 ```javascript
-const { data, error } = await client.queryMetrics(query, from, to);
-if (error) {
-  // Handle error
+async queryMetrics(query, from, to) {
+  try {
+    // Input validation
+    if (!query) {
+      return { data: null, error: new DatadogClientError("Query required") };
+    }
+
+    // Call SDK
+    const result = await this.metricsApi.queryMetrics({ from, to, query });
+    return { data: result, error: null };
+  } catch (error) {
+    const statusCode = error.statusCode ?? 500;
+    return {
+      data: null,
+      error: new DatadogClientError(
+        `HTTP ${statusCode}: ${error.message}`,
+        statusCode,
+        error
+      ),
+    };
+  }
 }
 ```
 
-### Custom Errors
+**Never throw errors from clients** - always return error in tuple.
 
-- `DatadogClientError` - API failures, includes statusCode
-- `MissingEnvironmentVariable` - Config errors
-- `InvalidConfigurationError` - Config validation
+### Tool Pattern
 
-### API Client Architecture
+Tools consist of a definition object with a handler function:
 
-1. `ApiClient` base class in `src/utils/apiClient.js`
-   - Generic HTTP client with fetch
-   - Methods: `get()`, `post()`, `put()`
-   - Error handling and timeouts
+```javascript
+const toolDefinition = {
+  name: "query_metrics",
+  description: "Query Datadog metrics...",
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
+  inputSchema: { /* JSON schema */ },
+};
 
-2. Domain-specific clients (Metrics, Logs, Events, etc.)
-   - Extend functionality for specific APIs
-   - Validate inputs
-   - Return `{ data, error }` format
+const handler = async (args) => {
+  const { data, error } = await client.queryMetrics(args.query, from, to);
 
-## Common Tasks
+  if (error) {
+    return {
+      content: [{ type: "text", text: formatToolError(error.message, error.statusCode) }],
+      isError: true,
+    };
+  }
 
-### Running Tests
+  return {
+    content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+  };
+};
 
-```bash
-npm test              # Run once
-npm test:watch       # Watch mode
-npm run test:coverage # With coverage
+export function getMetricsTools(client) {
+  return [{ ...toolDefinition, handler }];
+}
 ```
 
-### Linting & Formatting
+**Always use `formatToolError()`** for error messages to provide actionable hints.
 
-```bash
-npm run lint         # Check
-npm run lint:fix     # Fix issues
-npm run format       # Format with Prettier
-npm run validate     # All checks (lint + test)
+### Testing Pattern
+
+Tests use mocked Datadog SDK from `test/mocks/datadogApi.js`:
+
+```javascript
+import { mockDatadogApi } from "#test/mocks/datadogApi.js";
+
+it("should query metrics", async () => {
+  // Arrange
+  mockDatadogApi.metricsApi.queryMetrics.mockResolvedValue({ series: [...] });
+
+  // Act
+  const { data, error } = await client.queryMetrics("avg:cpu{*}", from, to);
+
+  // Assert
+  expect(error).toBeNull();
+  expect(data).toBeDefined();
+  expect(mockDatadogApi.metricsApi.queryMetrics).toHaveBeenCalledWith({
+    from,
+    to,
+    query: "avg:cpu{*}",
+  });
+});
 ```
 
-### Adding a New Client
+Run single test file:
+```bash
+npm test -- test/clients/metricsClient.test.js
+```
+
+## Development Commands
+
+| Command | Purpose |
+|---------|---------|
+| `npm start` | Run MCP server (stdio transport) |
+| `npm run dev` | Run with NODE_ENV=local |
+| `npm test` | Run all tests once |
+| `npm test -- <file>` | Run single test file |
+| `npm run test:watch` | Run tests in watch mode |
+| `npm run test:coverage` | Run with coverage report |
+| `npm run benchmark` | Run tool handler benchmarks |
+| `npm run lint` | Check code style (ESLint) |
+| `npm run lint:fix` | Auto-fix lint issues |
+| `npm run format` | Format with Prettier |
+| `npm run validate` | Run lint + test (pre-commit) |
+
+## Adding Features
+
+### Adding a new API client
 
 1. Create `src/clients/<domain>Client.js`
-2. Import `ApiClient` and error classes
-3. Implement methods following existing patterns
-4. Add JSDoc comments for all methods
-5. Use `{ data, error }` return pattern
-6. Add test fixtures in `test/fixtures/`
+2. Import SDK classes: `import { client, v1 } from "@datadog/datadog-api-client"`
+3. Configure SDK in constructor with apiKey/appKey/site
+4. Implement methods using SDK API classes
+5. Return `{ data, error }` tuples (never throw)
+6. Add JSDoc for all public methods
+7. Create test file in `test/clients/` with SDK mocks
 
-### Adding a Tool Handler
+### Adding a new tool
 
-1. Create `src/tools/<tool-name>.js`
-2. Use corresponding client from `src/clients/`
-3. Implement as MCP tool with proper schema
-4. Add to `src/index.js` tool registry
-5. Include error handling and validation
+1. Create `src/tools/<tool>Tools.js`
+2. Define tool schema with inputSchema following JSON Schema
+3. Add MCP hints: readOnlyHint, destructiveHint, idempotentHint, openWorldHint
+4. Implement handler using corresponding client
+5. Use `formatToolError()` for all error messages
+6. Export function that returns array of tools with handlers
+7. Register in `src/index.js` by importing and calling in `registerTools()`
+8. Add test file in `test/tools/` with mocked client
 
-## Environment Configuration
+### Tool schema hints (MCP best practices)
 
-Required variables (from .env):
+- `readOnlyHint: true` - Tool doesn't modify state (queries, reads)
+- `destructiveHint: true` - Tool modifies/deletes data (use sparingly)
+- `idempotentHint: true` - Safe to retry, same result
+- `openWorldHint: true` - May return no results (searches, filters)
 
-- `DATADOG_API_KEY` - Datadog API key (required)
-- `DATADOG_APP_KEY` - Datadog application key (required)
-- `DATADOG_SITE` - Datadog site domain (default: datadoghq.com)
-- `DATADOG_REGION` - Region for URLs (default: us1)
+## Error Handling
+
+### Custom errors (src/utils/errors.js)
+
+- `DatadogClientError` - API failures, includes statusCode
+- `MissingEnvironmentVariable` - Missing required env vars
+- `InvalidConfigurationError` - Config validation failures
+
+### Actionable error messages (src/utils/toolErrors.js)
+
+`formatToolError(message, statusCode)` adds hints for common errors:
+
+- 401/403 → "Check DATADOG_API_KEY and DATADOG_APP_KEY..."
+- 404 → "No resource found. Check the ID or query..."
+- 429 → "Datadog rate limit hit. Retry after a short delay..."
+- Time range errors → "Ensure 'from' is before 'to'."
+
+Always use this for tool error responses to guide AI agents.
+
+## Environment Variables
+
+Required for server to start:
+
+- `DATADOG_API_KEY` - Datadog API key
+- `DATADOG_APP_KEY` - Datadog application key
+
+Optional with defaults:
+
+- `DATADOG_SITE` - Datadog site (default: datadoghq.com)
+- `DATADOG_REGION` - Region code (default: us1)
 - `NODE_ENV` - Environment (default: local)
 - `MCP_SERVER_NAME` - Server name (default: datadog)
-- `MCP_SERVER_VERSION` - Server version (default: 1.0.0)
+- `MCP_SERVER_VERSION` - Version (default: 1.0.0)
+- `MCP_SLOW_TOOL_MS` - Slow tool threshold for logging (default: 2000)
 
 Load with `getConfiguration()` from `src/utils/environment.js`.
 
+## Observability
+
+### Tool call logging
+
+Server logs all tool calls to **stderr** as JSON lines:
+
+```json
+{
+  "timestamp": "2025-01-15T10:30:00.000Z",
+  "level": "info",
+  "message": "tool_call",
+  "tool": "query_metrics",
+  "durationMs": 450,
+  "slow": false
+}
+```
+
+Set `MCP_SLOW_TOOL_MS` environment variable to customize slow threshold (default 2000ms).
+
+### Benchmark tests
+
+Run `npm run benchmark` to measure tool handler performance with mocked APIs. Tests in `test/benchmark/`.
+
 ## Code Style
 
-- **Line Length**: 100 characters max
-- **Imports**: ES modules with path aliases
-- **Comments**: JSDoc on all exported functions/classes
-- **Variables**: Meaningful names, avoid single letters (except loops)
-- **Error Messages**: Clear and actionable
+- **Line length**: 100 characters (Prettier enforced)
+- **Quotes**: Double quotes for strings
+- **Semicolons**: Required (ESLint standard config)
+- **Unused vars**: Prefix with `_` to ignore (e.g., `_unused`)
+- **JSDoc**: Required for all exported functions/classes
+- **Imports**: Path aliases (#utils, #clients, #tools, #test)
 
-### JSDoc Example
+### ESLint rules
 
-```javascript
-/**
- * Query metrics data from Datadog.
- * @param {string} query - The metrics query
- * @param {number} from - Unix timestamp (seconds)
- * @param {number} to - Unix timestamp (seconds)
- * @returns {Promise<{data: Object, error: null} |
- *   {data: null, error: Error}>}
- */
-async queryMetrics(query, from, to) {
-  // ...
-}
-```
+- Extends: eslint-config-standard, prettier
+- Test files: No import ordering, no-use-before-define disabled
+- Unused variables with `_` prefix are allowed
 
-## Datadog API Integration
+## Time Handling
 
-### Base URLs
+Different Datadog APIs use different time formats:
 
-- V1 API: `https://api.{site}/api/v1`
-- V2 API: `https://api.{site}/api/v2`
+- **Metrics/Events**: Unix timestamps in **seconds**
+- **Logs/APM**: Unix timestamps in **milliseconds**
+- **ISO 8601**: All APIs accept ISO strings (e.g., "2025-01-15T10:30:00Z")
 
-### Authentication
+Tools should accept both formats and convert using helper functions (see `metricsTools.js` parseTimestamp).
 
-All requests include headers:
+## Git Workflow
 
-```javascript
-{
-  "DD-API-KEY": apiKey,
-  "DD-APPLICATION-KEY": appKey,
-  "Content-Type": "application/json"
-}
-```
+Conventional commits required:
 
-### Rate Limiting
+- `feat(scope): description` - New features
+- `fix(scope): description` - Bug fixes
+- `refactor(scope): description` - Code refactoring
+- `test(scope): description` - Test changes
+- `docs(scope): description` - Documentation
+- `chore(scope): description` - Maintenance
 
-Datadog APIs have rate limits. Implement backoff and error handling:
-
-- Check for 429 status codes
-- Respect Retry-After headers
-- Log rate limit errors
-
-## Testing
-
-### Test Structure
-
-```bash
-npm run test           # Run all .test.js files
-npm run test:watch    # Continuous mode
-```
-
-### Mock Data
-
-Use fixtures from `test/fixtures/datadogResponses.js`:
-
-```javascript
-import { metricsQueryResponse } from "#test/fixtures/datadogResponses.js";
-```
-
-### Setup
-
-`test/setup.js` initializes:
-
-- Environment variables
-- Global test configuration
-- Cleanup hooks
-
-## Git Conventions
-
-- Conventional commits: `type(scope): description`
-- Valid types: feat, fix, docs, chore, refactor, test, ci, perf
-- Examples:
-  - `feat(clients): add traces API support`
-  - `fix(metricsClient): handle invalid time ranges`
-  - `test(logsClient): add search validation tests`
-
-## Deployment
-
-This is an MCP server typically deployed as a subprocess. Ensure:
-
-1. Environment variables are set
-2. Dependencies installed (`npm install`)
-3. Port/transport configuration
-4. Process management (systemd, supervisord, Docker)
-
-## Useful Commands
-
-```bash
-npm start              # Start server
-npm run dev            # Dev mode with NODE_ENV=local
-npm run validate       # Full validation before commit
-npm run lint:fix       # Auto-fix style issues
-```
+Examples:
+- `feat(tools): add service dependencies tool`
+- `fix(clients): handle 429 rate limit errors`
+- `test(integration): add end-to-end server tests`
 
 ## Common Issues
 
-### Missing Environment Variables
+### SDK mocks not working
 
-Use `loadEnvironmentVariable()` for required vars. Throws `MissingEnvironmentVariable` with helpful message.
-
-### API Client Timeouts
-
-Default timeout: 30 seconds. Adjust in ApiClient constructor if needed:
+Ensure mocks are imported before clients in test files:
 
 ```javascript
-new ApiClient({ ..., timeout: 60000 })
+import { mockDatadogApi } from "#test/mocks/datadogApi.js";
+import { MetricsClient } from "#clients/metricsClient.js";
 ```
 
-### Type Checking
+The mock must be hoisted via `vi.hoisted()` - see `test/mocks/datadogApi.js`.
 
-JSDoc types are checked by the IDE/editor. Run with:
+### Tools not appearing in MCP client
 
-```bash
-# Via jsconfig.json "checkJs": true
-```
+1. Check tool is registered in `src/index.js` `registerTools()`
+2. Verify tool definition has required fields (name, description, inputSchema)
+3. Check server startup logs for "Registered tool: <name>"
+4. Restart MCP client after server changes
+
+### Type checking
+
+JSDoc types are validated via `jsconfig.json` with `"checkJs": true`. IDEs like VS Code will show type errors inline.
 
 ## References
 
-- Datadog API Docs: https://docs.datadoghq.com/api/
-- MCP Specification: https://modelcontextprotocol.io/
-- Similar Project: hq-bff/CLAUDE.md (for patterns)
-- Similar Project: cs-api/CLAUDE.md (for Node.js patterns)
+- [Datadog API Docs](https://docs.datadoghq.com/api/)
+- [MCP Specification](https://modelcontextprotocol.io/)
+- [Datadog API Client SDK](https://github.com/DataDog/datadog-api-client-typescript)

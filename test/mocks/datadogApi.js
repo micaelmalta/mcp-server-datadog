@@ -26,6 +26,9 @@ const instances = vi.hoisted(() => ({
     listLogs: vi.fn(),
     aggregateLogs: vi.fn(),
   },
+  logsIndexesApi: {
+    listLogIndexes: vi.fn(),
+  },
   spansApi: {
     listSpansGet: vi.fn(),
   },
@@ -42,6 +45,7 @@ vi.mock("@datadog/datadog-api-client", () => ({
     MetricsApi: vi.fn(() => instances.metricsApi),
     MonitorsApi: vi.fn(() => instances.monitorsApi),
     EventsApi: vi.fn(() => instances.eventsApi),
+    LogsIndexesApi: vi.fn(() => instances.logsIndexesApi),
   },
   v2: {
     LogsApi: vi.fn(() => instances.logsApi),

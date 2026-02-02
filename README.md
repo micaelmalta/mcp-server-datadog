@@ -1,77 +1,46 @@
 # MCP Datadog Server
 
-A Model Context Protocol (MCP) server for integrating Datadog API capabilities with AI assistants and code editors.
+A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server that exposes Datadog APIs to AI assistants and code editors via tools.
 
 ## Overview
 
-This project provides a comprehensive MCP server that enables AI tools to interact with Datadog APIs for:
+The server provides MCP tools for:
 
-- **Metrics**: Query and manage metrics data
-- **Logs**: Search and analyze logs with filters
-- **Events**: Query and manage Datadog events
-- **Monitors**: List, search, and manage monitors
-- **APM/Traces**: Query application traces and service health
+- **Metrics** – Query metrics, metadata, list metrics
+- **Logs** – Search logs, get log details, aggregate logs
+- **Events** – Search events, get event details
+- **Monitors** – List monitors, get status, search monitors
+- **APM/Traces** – Query traces, service health, service dependencies
+- **Services** – Service dependencies (single and multi-environment)
 
 ## Quick Start
 
-### 1. Configure and run
+### Prerequisites
 
-1. Copy `.env.example` to `.env` and set `DATADOG_API_KEY` and `DATADOG_APP_KEY`.
-2. Add the MCP server to your client (e.g. Cursor/Claude) using stdio and `node src/index.js`.
-3. Restart your editor; Datadog tools will be available.
+- Node.js 20.20.0+
+- npm
 
-### 2. Use the tools
+### Install and configure
 
-Example tools: `search_logs`, `query_metrics`, `search_events`, `list_monitors`, `query_traces`, `get_service_health`.
+```bash
+git clone <repo-url>
+cd mcp_datadog
+npm install
+cp .env.example .env
+```
 
-**Example queries you can ask:**
+Edit `.env` and set `DATADOG_API_KEY` and `DATADOG_APP_KEY`. Optionally set `DATADOG_SITE` (default `datadoghq.com`).
 
-- _"Show me error logs from the document-center service in the last hour"_ → `search_logs` with filter `service:document-center status:error`
-- _"What's the CPU usage on production servers?"_ → `query_metrics` for `system.cpu.user`
-- _"Are there any high-priority events in the last 24 hours?"_ → `search_events` with `priority:high`
-- _"How is the API service performing?"_ → `get_service_health`
+### Run
 
-### 3. Tools overview
+```bash
+npm start
+# or with NODE_ENV=local: npm run dev
+```
 
-| Tool                       | Purpose               |
-| -------------------------- | --------------------- |
-| `search_logs`              | Query production logs |
-| `query_metrics`            | Query metrics data    |
-| `get_metric_metadata`      | Get metric info       |
-| `list_metrics`             | List metrics          |
-| `get_log_details`          | Log details           |
-| `aggregate_logs`           | Log aggregation       |
-| `search_events`            | Search events         |
-| `get_event_details`        | Event details         |
-| `list_monitors`            | List monitors         |
-| `get_monitor_status`       | Monitor status        |
-| `search_monitors`          | Search monitors       |
-| `query_traces`             | APM traces            |
-| `get_service_health`       | Service health        |
-| `get_service_dependencies` | Service dependencies  |
+Add the server to your MCP client (e.g. Cursor, Claude) using **stdio** and the command `node src/index.js` (or `node /path/to/mcp_datadog/src/index.js`). Restart the client so the tools appear.
 
-### 4. Usage tips
-
-- **Time ranges**: Use ISO 8601 (`"2026-02-01T12:00:00Z"`) or Unix timestamps (seconds or milliseconds).
-- **Filters**: Datadog syntax, e.g. `service:document-center`, `status:error`, `env:production`, `host:prod-*`.
-- **Logs**: Reliable filters include `service:...`, `status:error`, `env:production`, `level:ERROR`.
-- **Metrics**: Examples: `system.cpu.user`, `system.memory.free`, `http.requests.count`, `app.latency.p99`.
-
-### 5. Troubleshooting
-
-- **Tools not available**: Restart your editor; ensure MCP server is configured and env vars are set.
-- **API errors**: 403 → permissions; 404 → plan/feature; 400 → check filter syntax.
-- **No data**: Check time range, try different filters, verify service/metric names.
-- **Verify server**: Run `npm test` and `node src/index.js` (you should see tool registration messages).
-
-### 6. Operational notes
-
-- **Log file**: The server writes logs to `mcp_datadog.log` in the process working directory. Run from a directory with appropriate permissions and ensure the log file is not exposed (e.g. not in a world-readable path).
-- **Rate limiting**: The server does not rate limit tool calls. Run it in a controlled environment; excessive use can hit Datadog API rate limits or quota.
-
-### 7. MCP configuration example
-
-Example entry for your MCP config (e.g. Cursor or Claude):
+### MCP config example
 
 ```json
 {
@@ -87,171 +56,103 @@ Example entry for your MCP config (e.g. Cursor or Claude):
 }
 ```
 
----
+## Tools
 
-## Architecture
+| Tool                                 | Purpose                          |
+| ------------------------------------ | -------------------------------- |
+| `query_metrics`                      | Query metrics data               |
+| `get_metric_metadata`                | Get metric metadata              |
+| `list_metrics`                       | List metrics                     |
+| `search_logs`                        | Search logs with filter          |
+| `get_log_details`                    | Get a single log by ID           |
+| `aggregate_logs`                     | Aggregate logs                   |
+| `search_events`                      | Search events                    |
+| `get_event_details`                  | Get event by ID                  |
+| `list_monitors`                      | List monitors                    |
+| `get_monitor_status`                 | Get monitor status               |
+| `search_monitors`                    | Search monitors                  |
+| `query_traces`                       | Query APM traces                 |
+| `get_service_health`                 | Service health metrics           |
+| `get_service_dependencies`           | Service dependencies             |
+| `get_service_dependencies_multi_env` | Dependencies across environments |
 
-The server is built with Node.js/JavaScript following the monorepo patterns used in Justworks services:
+**Example prompts:** _"Show error logs from service X in the last hour"_ → `search_logs`. _"What's CPU usage on production?"_ → `query_metrics`. _"How is the API service doing?"_ → `get_service_health`.
+
+**Time ranges:** Use ISO 8601 or Unix timestamps (seconds for metrics/events, milliseconds for logs/APM). **Filters:** Datadog syntax, e.g. `service:api`, `status:error`, `env:production`.
+
+## Project structure
 
 ```
 mcp_datadog/
 ├── src/
-│   ├── clients/          # Datadog API clients
-│   ├── tools/            # MCP tool handlers
-│   ├── utils/            # Shared utilities
-│   └── index.js          # Server entry point
-├── test/                 # Test files
-│   ├── fixtures/         # Mock data
-│   └── setup.js          # Test configuration
-└── docs/                 # Documentation
+│   ├── clients/     # Datadog API clients (SDK-based)
+│   ├── tools/       # MCP tool definitions and handlers
+│   ├── utils/       # Environment, errors, logger, toolErrors
+│   └── index.js     # Server entry point
+├── test/            # Vitest tests and fixtures
+│   ├── benchmark/   # Tool handler benchmarks (mocked)
+│   ├── mocks/      # Datadog SDK mocks
+│   └── ...
+├── docs/            # Additional documentation
+└── package.json
 ```
 
-## Tech Stack
-
-- **Runtime**: Node.js 20.20.0+
-- **Language**: JavaScript (ES modules, no TypeScript compilation)
-- **Type Hints**: JSDoc
-- **Testing**: Vitest
-- **Linting**: ESLint + Prettier
-- **MCP SDK**: @modelcontextprotocol/sdk
-
-## Setup
-
-### Prerequisites
-
-- Node.js 20.20.0 or later
-- npm
-
-### Installation
-
-```bash
-npm install
-```
-
-### Configuration
-
-Copy `.env.example` to `.env` and add your Datadog credentials:
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` with your Datadog API key, app key, and site:
-
-```env
-DATADOG_API_KEY=<your-api-key>
-DATADOG_APP_KEY=<your-app-key>
-DATADOG_SITE=datadoghq.com
-DATADOG_REGION=us1
-```
+**Tech stack:** Node.js 20+, JavaScript (ESM), JSDoc, Vitest, ESLint, Prettier, [@modelcontextprotocol/sdk](https://github.com/modelcontextprotocol/sdk), [@datadog/datadog-api-client](https://github.com/DataDog/datadog-api-client-typescript).
 
 ## Development
 
-### Available Commands
+### Commands
 
-```bash
-# Start server in development mode
-npm run dev
+| Command                 | Description                         |
+| ----------------------- | ----------------------------------- |
+| `npm start`             | Run server                          |
+| `npm run dev`           | Run with NODE_ENV=local             |
+| `npm test`              | Run tests                           |
+| `npm run test:watch`    | Tests in watch mode                 |
+| `npm run test:coverage` | Tests with coverage                 |
+| `npm run benchmark`     | Run tool-handler benchmark (mocked) |
+| `npm run lint`          | Lint                                |
+| `npm run lint:fix`      | Fix lint issues                     |
+| `npm run format`        | Format with Prettier                |
+| `npm run validate`      | Lint + test                         |
 
-# Run tests
-npm test
+### API client pattern
 
-# Watch tests for development
-npm test:watch
-
-# Lint code
-npm run lint
-
-# Fix lint issues
-npm run lint:fix
-
-# Format code
-npm run format
-
-# Validate (lint + test)
-npm run validate
-```
-
-## Project Structure
-
-### Clients
-
-Each client module wraps Datadog API endpoints with error handling:
-
-- **metricsClient.js** - Metrics queries and metadata
-- **logsClient.js** - Log searching and aggregation
-- **eventsClient.js** - Event queries and filtering
-- **monitorsClient.js** - Monitor management
-- **apmClient.js** - APM traces and service health
-
-### Utilities
-
-- **environment.js** - Environment variable loading and validation
-- **errors.js** - Custom error classes
-- **apiClient.js** - Generic HTTP client with error handling
-
-### Tools
-
-MCP tool handlers for each API capability (to be implemented):
-
-- Query metrics
-- Search logs
-- Find events
-- Manage monitors
-- Analyze traces
-
-## API Client Pattern
-
-All Datadog API clients follow a consistent error handling pattern:
+Clients return `{ data, error }`:
 
 ```javascript
 const { data, error } = await client.queryMetrics(query, from, to);
 if (error) {
-  console.error("Failed to query metrics:", error.message);
+  console.error(error.message, error.statusCode);
 } else {
-  console.log("Metrics data:", data);
+  console.log(data);
 }
 ```
 
-## Testing
+### Testing
 
-The project includes:
+Tests use Vitest with mocked Datadog SDK (`test/mocks/datadogApi.js`) and fixtures in `test/fixtures/`. Run `npm test` before committing.
 
-- Mock Datadog API responses in `test/fixtures/`
-- Test setup with environment variables
-- Vitest configuration with coverage support
+## Operational notes
 
-Run tests with:
+- **Logging:** Tool calls are logged to **stderr** as JSON lines (`tool`, `durationMs`, `slow`). Optional: set `MCP_SLOW_TOOL_MS` (default 2000) to mark slow calls. Some clients also write to `mcp_datadog.log` (see `src/utils/logger.js`).
+- **Rate limiting:** The server does not rate limit; high tool usage can hit Datadog API limits.
+- **Troubleshooting:** Tools missing → check MCP config and env vars, restart client. 403/404 → permissions or plan. No data → check time range and filter syntax.
 
-```bash
-npm test        # Run once
-npm test:watch  # Watch mode
-npm run test:coverage  # With coverage report
-```
+## Documentation
 
-## Error Handling
-
-The project uses custom error classes for type-safe error handling:
-
-- **DatadogClientError** - API request failures with HTTP status
-- **MissingEnvironmentVariable** - Configuration errors
-- **InvalidConfigurationError** - Invalid configuration values
-
-## Coding Style
-
-- ESLint with standard config + Prettier
-- 100-character line limit
-- JSDoc comments on all exported functions
-- ES modules with path aliases for imports
+- **README** (this file) – Setup, usage, structure.
+- **CLAUDE.md** – Project conventions and patterns for contributors.
+- **docs/** – Additional guides (e.g. performance, security) when present.
 
 ## Contributing
 
-1. Follow the existing code style (enforce with `npm run lint`)
-2. Write tests for new functionality
-3. Update this README if adding new capabilities
-4. Run `npm run validate` before committing
+1. Follow existing style (`npm run lint`, `npm run format`).
+2. Add tests for new behavior.
+3. Run `npm run validate` before committing.
+4. Use conventional commits: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`.
 
 ## Links
 
-- [Datadog API Documentation](https://docs.datadoghq.com/api/latest/)
+- [Datadog API](https://docs.datadoghq.com/api/)
 - [Model Context Protocol](https://modelcontextprotocol.io/)

@@ -3,6 +3,8 @@
  * Provides tools to search logs, get details, and aggregate log data.
  */
 
+import { formatToolError } from "#utils/toolErrors.js";
+
 /**
  * Convert various time formats to Unix timestamp in milliseconds.
  * @param {number | string} time - Time value (Unix seconds/ms, ISO 8601 string)
@@ -49,6 +51,10 @@ const searchLogsTool = {
   description:
     "Search Datadog logs with filters and a time range. Returns log entries " +
     "matching the query, useful for debugging and log analysis.",
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
   inputSchema: {
     type: "object",
     properties: {
@@ -89,6 +95,10 @@ const getLogDetailsTool = {
   description:
     "Get detailed information about a specific log entry. " +
     "Returns full log data including all attributes and metadata.",
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
   inputSchema: {
     type: "object",
     properties: {
@@ -112,6 +122,10 @@ const aggregateLogsTool = {
     "Aggregate log data for a time range using the specified " +
     "aggregation type (count, avg, percentile, min, max, sum). " +
     "Useful for statistical analysis of logs.",
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
   inputSchema: {
     type: "object",
     properties: {
@@ -181,7 +195,7 @@ async function handleSearchLogs(input, client) {
         content: [
           {
             type: "text",
-            text: `Error searching logs: ${error.message}`,
+            text: `Error searching logs: ${formatToolError(error.message, error?.statusCode)}`,
           },
         ],
       };
@@ -199,6 +213,9 @@ async function handleSearchLogs(input, client) {
       host: log.attributes?.host,
     }));
 
+    const hasMore = !!(data?.links?.next || data?.meta?.page?.after);
+    const nextCursor = data?.meta?.page?.after ?? null;
+
     return {
       isError: false,
       content: [
@@ -213,6 +230,8 @@ async function handleSearchLogs(input, client) {
               },
               logsCount: logs.length,
               logs: summarizedLogs,
+              has_more: hasMore,
+              next_cursor: nextCursor,
             }
           ),
         },
@@ -225,7 +244,7 @@ async function handleSearchLogs(input, client) {
       content: [
         {
           type: "text",
-          text: `Error: ${error.message}`,
+          text: `Error: ${formatToolError(error?.message ?? String(error), error?.statusCode)}`,
         },
       ],
     };
@@ -262,7 +281,7 @@ async function handleGetLogDetails(input, client) {
         content: [
           {
             type: "text",
-            text: `Error retrieving log details: ${error.message}`,
+            text: `Error retrieving log details: ${formatToolError(error.message, error?.statusCode)}`,
           },
         ],
       };
@@ -300,7 +319,7 @@ async function handleGetLogDetails(input, client) {
       content: [
         {
           type: "text",
-          text: `Error: ${error.message}`,
+          text: `Error: ${formatToolError(error?.message ?? String(error), error?.statusCode)}`,
         },
       ],
     };
@@ -365,7 +384,7 @@ async function handleAggregateLogs(input, client) {
         content: [
           {
             type: "text",
-            text: `Error aggregating logs: ${error.message}`,
+            text: `Error aggregating logs: ${formatToolError(error.message, error?.statusCode)}`,
           },
         ],
       };
@@ -399,7 +418,7 @@ async function handleAggregateLogs(input, client) {
       content: [
         {
           type: "text",
-          text: `Error: ${error.message}`,
+          text: `Error: ${formatToolError(error?.message ?? String(error), error?.statusCode)}`,
         },
       ],
     };

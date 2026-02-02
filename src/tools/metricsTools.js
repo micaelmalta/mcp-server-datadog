@@ -3,6 +3,8 @@
  * Provides tools to query metrics, get metadata, and list available metrics.
  */
 
+import { formatToolError } from "#utils/toolErrors.js";
+
 /**
  * Convert various time formats to Unix timestamp in seconds.
  * @param {number | string} time - Time value (Unix seconds, ISO 8601 string)
@@ -41,6 +43,10 @@ const queryMetricsTool = {
   description:
     "Query Datadog metrics data for a specified time range. Returns " +
     "time-series data with values aggregated over the specified period.",
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
   inputSchema: {
     type: "object",
     properties: {
@@ -83,6 +89,10 @@ const getMetricMetadataTool = {
   description:
     "Retrieve metadata about a Datadog metric including " +
     "units, description, tags, and integration information.",
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
   inputSchema: {
     type: "object",
     properties: {
@@ -105,6 +115,10 @@ const listMetricsTool = {
   description:
     "List available Datadog metrics, optionally filtered by a search query. " +
     "Useful for discovering what metrics are available in your environment.",
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
   inputSchema: {
     type: "object",
     properties: {
@@ -195,7 +209,7 @@ async function handleQueryMetrics(input, client) {
         content: [
           {
             type: "text",
-            text: `Error querying metrics: ${error.message}`,
+            text: `Error querying metrics: ${formatToolError(error.message, error?.statusCode)}`,
           },
         ],
       };
@@ -235,7 +249,7 @@ async function handleQueryMetrics(input, client) {
       content: [
         {
           type: "text",
-          text: `Error: ${error.message}`,
+          text: `Error: ${formatToolError(error?.message ?? String(error), error?.statusCode)}`,
         },
       ],
     };
@@ -272,7 +286,7 @@ async function handleGetMetricMetadata(input, client) {
         content: [
           {
             type: "text",
-            text: `Error retrieving metric metadata: ${error.message}`,
+            text: `Error retrieving metric metadata: ${formatToolError(error.message, error?.statusCode)}`,
           },
         ],
       };
@@ -301,7 +315,7 @@ async function handleGetMetricMetadata(input, client) {
       content: [
         {
           type: "text",
-          text: `Error: ${error.message}`,
+          text: `Error: ${formatToolError(error?.message ?? String(error), error?.statusCode)}`,
         },
       ],
     };
@@ -330,7 +344,7 @@ async function handleListMetrics(input, client) {
         content: [
           {
             type: "text",
-            text: `Error listing metrics: ${error.message}`,
+            text: `Error listing metrics: ${formatToolError(error.message, error?.statusCode)}`,
           },
         ],
       };
@@ -339,6 +353,7 @@ async function handleListMetrics(input, client) {
     // Apply limit to results if needed
     const metrics = data.results || [];
     const limited = metrics.slice(0, limit);
+    const hasMore = metrics.length > limit;
 
     return {
       isError: false,
@@ -348,9 +363,11 @@ async function handleListMetrics(input, client) {
           text: JSON.stringify(
             {
               query: query || "all",
+              count: limited.length,
               total: metrics.length,
               returned: limited.length,
               metrics: limited,
+              has_more: hasMore,
             },
             null,
             2
@@ -365,7 +382,7 @@ async function handleListMetrics(input, client) {
       content: [
         {
           type: "text",
-          text: `Error: ${error.message}`,
+          text: `Error: ${formatToolError(error?.message ?? String(error), error?.statusCode)}`,
         },
       ],
     };

@@ -3,6 +3,8 @@
  * Provides tools to query traces and get service health and dependency information.
  */
 
+import { formatToolError } from "#utils/toolErrors.js";
+
 /**
  * Convert various time formats to Unix timestamp in milliseconds.
  * @param {number | string} time - Time value (Unix seconds/ms, ISO 8601 string)
@@ -49,6 +51,10 @@ const queryTracesTool = {
   description:
     "Query Datadog APM traces for a service. Returns trace data with " +
     "latency information and span details. Useful for performance debugging.",
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
   inputSchema: {
     type: "object",
     properties: {
@@ -93,6 +99,10 @@ const getServiceHealthTool = {
   description:
     "Get health metrics for a service including latency, error rate, and throughput. " +
     "Useful for monitoring service performance and health status.",
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
   inputSchema: {
     type: "object",
     properties: {
@@ -130,6 +140,10 @@ const getServiceDependenciesTool = {
   description:
     "Get the service dependency map for a service, showing which services " +
     "it calls and which services call it. Useful for understanding architecture.",
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
   inputSchema: {
     type: "object",
     properties: {
@@ -210,7 +224,7 @@ async function handleQueryTraces(input, client) {
         content: [
           {
             type: "text",
-            text: `Error querying traces: ${error.message}`,
+            text: `Error querying traces: ${formatToolError(error.message, error?.statusCode)}`,
           },
         ],
       };
@@ -252,7 +266,7 @@ async function handleQueryTraces(input, client) {
       content: [
         {
           type: "text",
-          text: `Error: ${error.message}`,
+          text: `Error: ${formatToolError(error?.message ?? String(error), error?.statusCode)}`,
         },
       ],
     };
@@ -312,7 +326,7 @@ async function handleGetServiceHealth(input, client) {
         content: [
           {
             type: "text",
-            text: `Error retrieving service health: ${error.message}`,
+            text: `Error retrieving service health: ${formatToolError(error.message, error?.statusCode)}`,
           },
         ],
       };
@@ -345,7 +359,7 @@ async function handleGetServiceHealth(input, client) {
       content: [
         {
           type: "text",
-          text: `Error: ${error.message}`,
+          text: `Error: ${formatToolError(error?.message ?? String(error), error?.statusCode)}`,
         },
       ],
     };
@@ -404,7 +418,7 @@ async function handleGetServiceDependencies(input, client) {
         content: [
           {
             type: "text",
-            text: `Error retrieving service dependencies: ${error.message}`,
+            text: `Error retrieving service dependencies: ${formatToolError(error.message, error?.statusCode)}`,
           },
         ],
       };
@@ -437,7 +451,7 @@ async function handleGetServiceDependencies(input, client) {
       content: [
         {
           type: "text",
-          text: `Error: ${error.message}`,
+          text: `Error: ${formatToolError(error?.message ?? String(error), error?.statusCode)}`,
         },
       ],
     };

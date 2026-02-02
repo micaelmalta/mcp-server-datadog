@@ -2,32 +2,40 @@
  * Tests for Datadog Events API client.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { EventsClient } from "#clients/eventsClient.js";
+import { mockDatadogApi } from "#test/mocks/datadogApi.js";
 import {
-  mockSuccess,
-  mockError,
-  clearMocks,
   createMockConfig,
   createTestTimestamps,
   assertValidResponse,
-  getLastFetchCall,
 } from "#test/helpers.js";
 import { eventsSearchResponse } from "#test/fixtures/datadogResponses.js";
 
 describe("EventsClient", () => {
   let client;
   let timestamps;
+  const { eventsApi } = mockDatadogApi;
 
   beforeEach(() => {
-    clearMocks();
+    vi.mocked(eventsApi.listEvents).mockReset();
+    vi.mocked(eventsApi.getEvent).mockReset();
+    eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
+    eventsApi.getEvent.mockResolvedValue({
+      event: {
+        id: 12345678,
+        title: "Monitor Alert: High CPU",
+        priority: "normal",
+        date_happened: 1609459200,
+      },
+    });
     client = new EventsClient(createMockConfig());
     timestamps = createTestTimestamps();
   });
 
   describe("searchEvents", () => {
     it("should search events successfully", async () => {
-      mockSuccess(eventsSearchResponse);
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
       const { data, error } = await client.searchEvents(
         "priority:high",
@@ -40,8 +48,8 @@ describe("EventsClient", () => {
       expect(Array.isArray(data.events)).toBe(true);
     });
 
-    it("should include query parameter", async () => {
-      mockSuccess(eventsSearchResponse);
+    it("should include query as tags in listEvents call", async () => {
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
       await client.searchEvents(
         "priority:high",
@@ -49,12 +57,15 @@ describe("EventsClient", () => {
         timestamps.to
       );
 
-      const [url] = getLastFetchCall();
-      expect(url).toContain("query=priority%3Ahigh");
+      expect(eventsApi.listEvents).toHaveBeenCalledWith({
+        start: Math.floor(timestamps.from),
+        end: Math.floor(timestamps.to),
+        tags: "priority:high",
+      });
     });
 
     it("should handle empty query", async () => {
-      mockSuccess(eventsSearchResponse);
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
       const { data, error } = await client.searchEvents(
         "",
@@ -63,49 +74,9 @@ describe("EventsClient", () => {
       );
 
       assertValidResponse({ data, error }, false);
-      const [url] = getLastFetchCall();
-      expect(url).toContain("query=");
-    });
-
-    it("should use default page size of 10", async () => {
-      mockSuccess(eventsSearchResponse);
-
-      await client.searchEvents(
-        "priority:high",
-        timestamps.from,
-        timestamps.to
+      expect(eventsApi.listEvents).toHaveBeenCalledWith(
+        expect.objectContaining({ tags: "" })
       );
-
-      const [url] = getLastFetchCall();
-      expect(url).toContain("page_size=10");
-    });
-
-    it("should support custom page size", async () => {
-      mockSuccess(eventsSearchResponse);
-
-      await client.searchEvents(
-        "priority:high",
-        timestamps.from,
-        timestamps.to,
-        { pageSize: 50 }
-      );
-
-      const [url] = getLastFetchCall();
-      expect(url).toContain("page_size=50");
-    });
-
-    it("should enforce maximum page size of 100", async () => {
-      mockSuccess(eventsSearchResponse);
-
-      await client.searchEvents(
-        "priority:high",
-        timestamps.from,
-        timestamps.to,
-        { pageSize: 200 }
-      );
-
-      const [url] = getLastFetchCall();
-      expect(url).toContain("page_size=100");
     });
 
     it("should reject when from >= to", async () => {
@@ -131,7 +102,9 @@ describe("EventsClient", () => {
     });
 
     it("should handle API errors", async () => {
-      mockError({ status: 401, message: "Unauthorized" });
+      const err = new Error("Unauthorized");
+      err.statusCode = 401;
+      eventsApi.listEvents.mockRejectedValue(err);
 
       const { data, error } = await client.searchEvents(
         "priority:high",
@@ -144,19 +117,21 @@ describe("EventsClient", () => {
     });
 
     it("should floor timestamps", async () => {
-      mockSuccess(eventsSearchResponse);
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
       const fromFloat = timestamps.from + 0.5;
       const toFloat = timestamps.to + 0.7;
 
       await client.searchEvents("priority:high", fromFloat, toFloat);
 
-      const [url] = getLastFetchCall();
-      expect(url).toContain(`start=${Math.floor(fromFloat)}`);
-      expect(url).toContain(`end=${Math.floor(toFloat)}`);
+      expect(eventsApi.listEvents).toHaveBeenCalledWith({
+        start: Math.floor(fromFloat),
+        end: Math.floor(toFloat),
+        tags: "priority:high",
+      });
     });
 
     it("should include multiple events in response", async () => {
-      mockSuccess(eventsSearchResponse);
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
       const { data } = await client.searchEvents(
         "priority:high",
@@ -170,7 +145,7 @@ describe("EventsClient", () => {
 
   describe("getEventDetails", () => {
     it("should get event details successfully", async () => {
-      mockSuccess({
+      eventsApi.getEvent.mockResolvedValue({
         event: {
           id: 12345678,
           title: "Monitor Alert: High CPU",
@@ -185,8 +160,16 @@ describe("EventsClient", () => {
       expect(data.event).toBeDefined();
     });
 
+    it("should call getEvent with eventId", async () => {
+      eventsApi.getEvent.mockResolvedValue({ event: { id: 12345678 } });
+
+      await client.getEventDetails(12345678);
+
+      expect(eventsApi.getEvent).toHaveBeenCalledWith({ eventId: 12345678 });
+    });
+
     it("should handle numeric zero event ID", async () => {
-      mockSuccess({ event: { id: 0 } });
+      eventsApi.getEvent.mockResolvedValue({ event: { id: 0 } });
 
       const { data, error } = await client.getEventDetails(0);
 
@@ -208,7 +191,9 @@ describe("EventsClient", () => {
     });
 
     it("should handle 404 not found", async () => {
-      mockError({ status: 404, message: "Not Found" });
+      const err = new Error("Not Found");
+      err.statusCode = 404;
+      eventsApi.getEvent.mockRejectedValue(err);
 
       const { data, error } = await client.getEventDetails(99999999);
 
@@ -217,7 +202,9 @@ describe("EventsClient", () => {
     });
 
     it("should handle API errors", async () => {
-      mockError({ status: 500, message: "Internal Server Error" });
+      const err = new Error("Internal Server Error");
+      err.statusCode = 500;
+      eventsApi.getEvent.mockRejectedValue(err);
 
       const { data, error } = await client.getEventDetails(12345678);
 
@@ -226,7 +213,7 @@ describe("EventsClient", () => {
     });
 
     it("should include large event IDs", async () => {
-      mockSuccess({ event: { id: 9999999999 } });
+      eventsApi.getEvent.mockResolvedValue({ event: { id: 9999999999 } });
 
       const { data, error } = await client.getEventDetails(9999999999);
 
@@ -236,7 +223,7 @@ describe("EventsClient", () => {
 
   describe("getMonitorEvents", () => {
     it("should get monitor events successfully", async () => {
-      mockSuccess(eventsSearchResponse);
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
       const { data, error } = await client.getMonitorEvents(
         1234567,
@@ -248,8 +235,8 @@ describe("EventsClient", () => {
       expect(data.events).toBeDefined();
     });
 
-    it("should include monitor_id in query", async () => {
-      mockSuccess(eventsSearchResponse);
+    it("should include monitor_id in tags", async () => {
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
       await client.getMonitorEvents(
         1234567,
@@ -257,12 +244,13 @@ describe("EventsClient", () => {
         timestamps.to
       );
 
-      const [url] = getLastFetchCall();
-      expect(url).toContain("query=monitor_id%3A1234567");
+      expect(eventsApi.listEvents).toHaveBeenCalledWith(
+        expect.objectContaining({ tags: "monitor_id:1234567" })
+      );
     });
 
     it("should handle numeric zero monitor ID", async () => {
-      mockSuccess(eventsSearchResponse);
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
       const { data, error } = await client.getMonitorEvents(
         0,
@@ -298,7 +286,7 @@ describe("EventsClient", () => {
 
   describe("searchEventsByAlertType", () => {
     it("should search events by alert type", async () => {
-      mockSuccess(eventsSearchResponse);
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
       const { data, error } = await client.searchEventsByAlertType(
         "error",
@@ -310,8 +298,8 @@ describe("EventsClient", () => {
       expect(data.events).toBeDefined();
     });
 
-    it("should include alert_type in query", async () => {
-      mockSuccess(eventsSearchResponse);
+    it("should include alert_type in tags", async () => {
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
       await client.searchEventsByAlertType(
         "warning",
@@ -319,12 +307,13 @@ describe("EventsClient", () => {
         timestamps.to
       );
 
-      const [url] = getLastFetchCall();
-      expect(url).toContain("query=alert_type%3Awarning");
+      expect(eventsApi.listEvents).toHaveBeenCalledWith(
+        expect.objectContaining({ tags: "alert_type:warning" })
+      );
     });
 
     it("should handle success alert type", async () => {
-      mockSuccess(eventsSearchResponse);
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
       const { data, error } = await client.searchEventsByAlertType(
         "success",
@@ -358,7 +347,9 @@ describe("EventsClient", () => {
     });
 
     it("should handle API errors", async () => {
-      mockError({ status: 400, message: "Bad Request" });
+      const err = new Error("Bad Request");
+      err.statusCode = 400;
+      eventsApi.listEvents.mockRejectedValue(err);
 
       const { data, error } = await client.searchEventsByAlertType(
         "error",
@@ -373,7 +364,7 @@ describe("EventsClient", () => {
 
   describe("searchEventsByTags", () => {
     it("should search events by tags", async () => {
-      mockSuccess(eventsSearchResponse);
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
       const { data, error } = await client.searchEventsByTags(
         ["env:prod", "service:api"],
@@ -386,7 +377,7 @@ describe("EventsClient", () => {
     });
 
     it("should include all tags in query", async () => {
-      mockSuccess(eventsSearchResponse);
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
       await client.searchEventsByTags(
         ["env:prod", "service:api"],
@@ -394,13 +385,15 @@ describe("EventsClient", () => {
         timestamps.to
       );
 
-      const [url] = getLastFetchCall();
-      expect(url).toContain("tags%3Aenv%3Aprod");
-      expect(url).toContain("tags%3Aservice%3Aapi");
+      expect(eventsApi.listEvents).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tags: "tags:env:prod AND tags:service:api",
+        })
+      );
     });
 
     it("should handle single tag", async () => {
-      mockSuccess(eventsSearchResponse);
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
       const { data, error } = await client.searchEventsByTags(
         ["env:prod"],
@@ -445,7 +438,7 @@ describe("EventsClient", () => {
     });
 
     it("should handle tags with special characters", async () => {
-      mockSuccess(eventsSearchResponse);
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
       const { data, error } = await client.searchEventsByTags(
         ["env:prod@v1", "service:api-gateway"],
@@ -457,7 +450,7 @@ describe("EventsClient", () => {
     });
 
     it("should handle many tags", async () => {
-      mockSuccess(eventsSearchResponse);
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
       const manyTags = Array.from({ length: 10 }, (_, i) => `tag${i}:value${i}`);
 
       const { data, error } = await client.searchEventsByTags(
@@ -471,12 +464,8 @@ describe("EventsClient", () => {
   });
 
   describe("API integration", () => {
-    it("should use v1 API base URL", () => {
-      expect(client.client.baseUrl).toBe("https://api.datadoghq.com/api/v1");
-    });
-
-    it("should include DD-API-KEY header", async () => {
-      mockSuccess(eventsSearchResponse);
+    it("should use eventsApi when searching", async () => {
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
       await client.searchEvents(
         "priority:high",
@@ -484,23 +473,7 @@ describe("EventsClient", () => {
         timestamps.to
       );
 
-      const [, options] = getLastFetchCall();
-      expect(options.headers["DD-API-KEY"]).toBe(createMockConfig().apiKey);
-    });
-
-    it("should include DD-APPLICATION-KEY header", async () => {
-      mockSuccess(eventsSearchResponse);
-
-      await client.searchEvents(
-        "priority:high",
-        timestamps.from,
-        timestamps.to
-      );
-
-      const [, options] = getLastFetchCall();
-      expect(options.headers["DD-APPLICATION-KEY"]).toBe(
-        createMockConfig().appKey
-      );
+      expect(eventsApi.listEvents).toHaveBeenCalledTimes(1);
     });
 
     it("should support custom site domain", () => {
@@ -509,26 +482,15 @@ describe("EventsClient", () => {
         site: "datadoghq.eu",
       });
 
-      expect(customClient.client.baseUrl).toBe("https://api.datadoghq.eu/api/v1");
-    });
-
-    it("should use GET method for search", async () => {
-      mockSuccess(eventsSearchResponse);
-
-      await client.searchEvents(
-        "priority:high",
-        timestamps.from,
-        timestamps.to
-      );
-
-      const [, options] = getLastFetchCall();
-      expect(options.method).toBe("GET");
+      expect(customClient.site).toBe("datadoghq.eu");
     });
   });
 
   describe("error handling", () => {
     it("should handle 401 unauthorized", async () => {
-      mockError({ status: 401, message: "Unauthorized" });
+      const err = new Error("Unauthorized");
+      err.statusCode = 401;
+      eventsApi.listEvents.mockRejectedValue(err);
 
       const { data: _data, error } = await client.searchEvents(
         "priority:high",
@@ -540,7 +502,9 @@ describe("EventsClient", () => {
     });
 
     it("should handle 403 forbidden", async () => {
-      mockError({ status: 403, message: "Forbidden" });
+      const err = new Error("Forbidden");
+      err.statusCode = 403;
+      eventsApi.listEvents.mockRejectedValue(err);
 
       const { data: _data, error } = await client.searchEvents(
         "priority:high",
@@ -552,10 +516,9 @@ describe("EventsClient", () => {
     });
 
     it("should handle 429 rate limit", async () => {
-      mockError({
-        status: 429,
-        message: "Too Many Requests",
-      });
+      const err = new Error("Too Many Requests");
+      err.statusCode = 429;
+      eventsApi.listEvents.mockRejectedValue(err);
 
       const { data: _data, error } = await client.searchEvents(
         "priority:high",
@@ -567,7 +530,9 @@ describe("EventsClient", () => {
     });
 
     it("should handle 500 server error", async () => {
-      mockError({ status: 500, message: "Internal Server Error" });
+      const err = new Error("Internal Server Error");
+      err.statusCode = 500;
+      eventsApi.listEvents.mockRejectedValue(err);
 
       const { data: _data, error } = await client.searchEvents(
         "priority:high",
@@ -579,11 +544,10 @@ describe("EventsClient", () => {
     });
 
     it("should preserve error details", async () => {
-      mockError({
-        status: 400,
-        message: "Bad Request",
-        errorData: { errors: ["Invalid query"] },
-      });
+      const err = new Error("Bad Request");
+      err.statusCode = 400;
+      err.body = { errors: ["Invalid query"] };
+      eventsApi.listEvents.mockRejectedValue(err);
 
       const { data: _data, error } = await client.searchEvents(
         "invalid:",
@@ -591,14 +555,15 @@ describe("EventsClient", () => {
         timestamps.to
       );
 
-      expect(error.originalError).toBeDefined();
+      expect(error.originalError).toBe(err);
     });
   });
 
   describe("edge cases", () => {
     it("should handle complex event queries", async () => {
-      mockSuccess(eventsSearchResponse);
-      const complexQuery = "priority:high AND (alert_type:error OR alert_type:warning)";
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
+      const complexQuery =
+        "priority:high AND (alert_type:error OR alert_type:warning)";
 
       const { data, error } = await client.searchEvents(
         complexQuery,
@@ -610,7 +575,7 @@ describe("EventsClient", () => {
     });
 
     it("should handle very old timestamps", async () => {
-      mockSuccess(eventsSearchResponse);
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
       const year2000From = 946684800; // 2000-01-01
       const year2000To = 946771200; // 2000-01-02
 
@@ -624,7 +589,7 @@ describe("EventsClient", () => {
     });
 
     it("should handle events with unicode text", async () => {
-      mockSuccess({
+      eventsApi.listEvents.mockResolvedValue({
         ...eventsSearchResponse,
         events: [
           {
@@ -644,7 +609,7 @@ describe("EventsClient", () => {
     });
 
     it("should handle responses with tags", async () => {
-      mockSuccess(eventsSearchResponse);
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
       const { data } = await client.searchEvents(
         "priority:high",

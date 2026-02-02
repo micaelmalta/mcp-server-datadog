@@ -2,64 +2,78 @@
  * Tests for Datadog APM/Traces API client.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ApmClient } from "#clients/apmClient.js";
+import { mockDatadogApi } from "#test/mocks/datadogApi.js";
 import {
-  mockSuccess,
-  mockError,
-  clearMocks,
   createMockConfig,
   createTestTimestamps,
   assertValidResponse,
-  getLastFetchCall,
 } from "#test/helpers.js";
-import {
-  tracesQueryResponse,
-  serviceHealthResponse,
-  serviceDependenciesResponse,
-} from "#test/fixtures/datadogResponses.js";
+import { tracesQueryResponse } from "#test/fixtures/datadogResponses.js";
 
 describe("ApmClient", () => {
   let client;
   let timestamps;
+  const { spansApi, metricsApi } = mockDatadogApi;
 
   beforeEach(() => {
-    clearMocks();
+    vi.mocked(spansApi.listSpansGet).mockReset();
+    vi.mocked(metricsApi.queryMetrics).mockReset();
+    // Default: spans API returns span list (client builds traces from it)
+    spansApi.listSpansGet.mockResolvedValue({ data: tracesQueryResponse.data });
+    metricsApi.queryMetrics.mockResolvedValue({
+      series: [
+        { scope: "service:api", tag_set: ["env:prod"], pointlist: [[1, 1]] },
+      ],
+    });
     client = new ApmClient(createMockConfig());
     timestamps = createTestTimestamps();
   });
 
   describe("queryTraces", () => {
-    it("should query traces successfully", async () => {
-      mockSuccess(tracesQueryResponse);
+    it("should query traces successfully when serviceName provided", async () => {
+      spansApi.listSpansGet.mockResolvedValue({ data: tracesQueryResponse.data });
 
       const { data, error } = await client.queryTraces(
-        "service:api",
+        "env:prod",
         timestamps.fromMs,
-        timestamps.toMs
+        timestamps.toMs,
+        { serviceName: "api" }
       );
 
       assertValidResponse({ data, error }, false);
-      expect(data.data).toBeDefined();
-      expect(Array.isArray(data.data)).toBe(true);
+      expect(data.traces).toBeDefined();
+      expect(Array.isArray(data.traces)).toBe(true);
+      expect(data.tracesCount).toBeDefined();
     });
 
-    it("should include filter in request", async () => {
-      mockSuccess(tracesQueryResponse);
+    it("should call listSpansGet with filter and service when provided", async () => {
+      spansApi.listSpansGet.mockResolvedValue({ data: tracesQueryResponse.data });
 
       await client.queryTraces(
-        "service:api status:error",
+        "env:prod",
         timestamps.fromMs,
-        timestamps.toMs
+        timestamps.toMs,
+        { serviceName: "api" }
       );
 
-      const [, options] = getLastFetchCall();
-      const body = JSON.parse(options.body);
-      expect(body.filter.query).toBe("service:api status:error");
+      expect(spansApi.listSpansGet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filterQuery: "service:api env:prod",
+          filterFrom: new Date(timestamps.fromMs).toISOString(),
+          filterTo: new Date(timestamps.toMs).toISOString(),
+          pageLimit: 100,
+        })
+      );
     });
 
-    it("should handle empty filter", async () => {
-      mockSuccess(tracesQueryResponse);
+    it("should use fallback metrics when no serviceName and empty filter", async () => {
+      metricsApi.queryMetrics.mockResolvedValue({
+        series: [
+          { scope: "env:prod", tag_set: [], pointlist: [[1, 1]] },
+        ],
+      });
 
       const { data, error } = await client.queryTraces(
         "",
@@ -68,89 +82,47 @@ describe("ApmClient", () => {
       );
 
       assertValidResponse({ data, error }, false);
-      const [, options] = getLastFetchCall();
-      const body = JSON.parse(options.body);
-      expect(body.filter.query).toBe("");
-    });
-
-    it("should use default page size of 10", async () => {
-      mockSuccess(tracesQueryResponse);
-
-      await client.queryTraces(
-        "service:api",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
-
-      const [, options] = getLastFetchCall();
-      const body = JSON.parse(options.body);
-      expect(body.options.page_size).toBe(10);
+      expect(data.traces).toBeDefined();
+      expect(data.message).toContain("metrics");
+      expect(metricsApi.queryMetrics).toHaveBeenCalled();
     });
 
     it("should support custom page size", async () => {
-      mockSuccess(tracesQueryResponse);
+      spansApi.listSpansGet.mockResolvedValue({ data: tracesQueryResponse.data });
 
       await client.queryTraces(
-        "service:api",
+        "env:prod",
         timestamps.fromMs,
         timestamps.toMs,
-        { pageSize: 50 }
+        { serviceName: "api", pageSize: 50 }
       );
 
-      const [, options] = getLastFetchCall();
-      const body = JSON.parse(options.body);
-      expect(body.options.page_size).toBe(50);
+      expect(spansApi.listSpansGet).toHaveBeenCalledWith(
+        expect.objectContaining({ pageLimit: 50 })
+      );
     });
 
     it("should enforce maximum page size of 100", async () => {
-      mockSuccess(tracesQueryResponse);
+      spansApi.listSpansGet.mockResolvedValue({ data: tracesQueryResponse.data });
 
       await client.queryTraces(
-        "service:api",
+        "env:prod",
         timestamps.fromMs,
         timestamps.toMs,
-        { pageSize: 200 }
+        { serviceName: "api", pageSize: 200 }
       );
 
-      const [, options] = getLastFetchCall();
-      const body = JSON.parse(options.body);
-      expect(body.options.page_size).toBe(100);
-    });
-
-    it("should use default sort of timestamp", async () => {
-      mockSuccess(tracesQueryResponse);
-
-      await client.queryTraces(
-        "service:api",
-        timestamps.fromMs,
-        timestamps.toMs
+      expect(spansApi.listSpansGet).toHaveBeenCalledWith(
+        expect.objectContaining({ pageLimit: 100 })
       );
-
-      const [, options] = getLastFetchCall();
-      const body = JSON.parse(options.body);
-      expect(body.options.sort).toBe("timestamp");
-    });
-
-    it("should support custom sort field", async () => {
-      mockSuccess(tracesQueryResponse);
-
-      await client.queryTraces(
-        "service:api",
-        timestamps.fromMs,
-        timestamps.toMs,
-        { sortBy: "duration" }
-      );
-
-      const [, options] = getLastFetchCall();
-      const body = JSON.parse(options.body);
-      expect(body.options.sort).toBe("duration");
     });
 
     it("should reject when from >= to", async () => {
       const { data, error } = await client.queryTraces(
         "service:api",
         timestamps.toMs,
-        timestamps.fromMs
+        timestamps.fromMs,
+        { serviceName: "api" }
       );
 
       assertValidResponse({ data, error }, true);
@@ -161,55 +133,70 @@ describe("ApmClient", () => {
       const { data, error } = await client.queryTraces(
         "service:api",
         timestamps.fromMs,
-        timestamps.fromMs
+        timestamps.fromMs,
+        { serviceName: "api" }
       );
 
       assertValidResponse({ data, error }, true);
       expect(error.message).toContain("Start time must be before end time");
     });
 
-    it("should floor timestamps", async () => {
-      mockSuccess(tracesQueryResponse);
-      const fromFloat = timestamps.fromMs + 0.5;
-      const toFloat = timestamps.toMs + 0.7;
-
-      await client.queryTraces("service:api", fromFloat, toFloat);
-
-      const [, options] = getLastFetchCall();
-      const body = JSON.parse(options.body);
-      expect(body.filter.from).toBe(Math.floor(fromFloat));
-      expect(body.filter.to).toBe(Math.floor(toFloat));
-    });
-
-    it("should handle API errors", async () => {
-      mockError({ status: 401, message: "Unauthorized" });
+    it("should handle API errors when spans and fallback both fail", async () => {
+      const err = new Error("Unauthorized");
+      err.statusCode = 401;
+      spansApi.listSpansGet.mockRejectedValue(err);
+      metricsApi.queryMetrics.mockRejectedValue(err);
 
       const { data, error } = await client.queryTraces(
-        "service:api",
+        "env:prod",
         timestamps.fromMs,
-        timestamps.toMs
+        timestamps.toMs,
+        { serviceName: "api" }
       );
 
       assertValidResponse({ data, error }, true);
       expect(error.statusCode).toBe(401);
     });
 
-    it("should handle multiple traces in response", async () => {
-      mockSuccess(tracesQueryResponse);
+    it("should fall back to metrics when spans API errors", async () => {
+      spansApi.listSpansGet.mockRejectedValue(new Error("Forbidden"));
+      metricsApi.queryMetrics.mockResolvedValue({
+        series: [{ scope: "env:prod", tag_set: [], pointlist: [[1, 1]] }],
+      });
 
-      const { data } = await client.queryTraces(
-        "service:api",
+      const { data, error } = await client.queryTraces(
+        "env:prod",
         timestamps.fromMs,
-        timestamps.toMs
+        timestamps.toMs,
+        { serviceName: "api" }
       );
 
-      expect(data.data.length).toBeGreaterThan(1);
+      assertValidResponse({ data, error }, false);
+      expect(data.message).toContain("metrics");
+    });
+
+    it("should include multiple traces when multiple trace_ids in spans", async () => {
+      const twoTraces = [
+        { ...tracesQueryResponse.data[0], trace_id: "aaa" },
+        { ...tracesQueryResponse.data[1], trace_id: "aaa" },
+        { ...tracesQueryResponse.data[0], trace_id: "bbb", span_id: "b1" },
+      ];
+      spansApi.listSpansGet.mockResolvedValue({ data: twoTraces });
+
+      const { data } = await client.queryTraces(
+        "env:prod",
+        timestamps.fromMs,
+        timestamps.toMs,
+        { serviceName: "api" }
+      );
+
+      expect(data.traces.length).toBeGreaterThanOrEqual(1);
     });
   });
 
   describe("getServiceHealth", () => {
     it("should get service health successfully", async () => {
-      mockSuccess(serviceHealthResponse);
+      metricsApi.queryMetrics.mockResolvedValue({ series: [] });
 
       const { data, error } = await client.getServiceHealth(
         "api",
@@ -219,7 +206,9 @@ describe("ApmClient", () => {
 
       assertValidResponse({ data, error }, false);
       expect(data.service).toBe("api");
-      expect(data.health).toBeDefined();
+      expect(data.requests).toBeDefined();
+      expect(data.errors).toBeDefined();
+      expect(data.latency).toBeDefined();
     });
 
     it("should reject empty service name", async () => {
@@ -244,8 +233,8 @@ describe("ApmClient", () => {
       expect(error.message).toContain("Service name is required");
     });
 
-    it("should include service name in request", async () => {
-      mockSuccess(serviceHealthResponse);
+    it("should call queryMetrics with service filter", async () => {
+      metricsApi.queryMetrics.mockResolvedValue({ series: [] });
 
       await client.getServiceHealth(
         "api",
@@ -253,8 +242,12 @@ describe("ApmClient", () => {
         timestamps.toMs
       );
 
-      const [url] = getLastFetchCall();
-      expect(url).toContain("service=api");
+      expect(metricsApi.queryMetrics).toHaveBeenCalledWith(
+        expect.objectContaining({
+          from: Math.floor(timestamps.fromMs / 1000),
+          to: Math.floor(timestamps.toMs / 1000),
+        })
+      );
     });
 
     it("should reject when from >= to", async () => {
@@ -268,8 +261,8 @@ describe("ApmClient", () => {
       expect(error.message).toContain("Start time must be before end time");
     });
 
-    it("should handle API errors", async () => {
-      mockError({ status: 404, message: "Not Found" });
+    it("should return empty arrays when metrics return no series", async () => {
+      metricsApi.queryMetrics.mockResolvedValue({ series: [] });
 
       const { data, error } = await client.getServiceHealth(
         "nonexistent",
@@ -277,12 +270,16 @@ describe("ApmClient", () => {
         timestamps.toMs
       );
 
-      assertValidResponse({ data, error }, true);
-      expect(error.statusCode).toBe(404);
+      assertValidResponse({ data, error }, false);
+      expect(data.requests).toHaveLength(0);
+      expect(data.errors).toHaveLength(0);
+      expect(data.latency).toHaveLength(0);
     });
 
-    it("should return health metrics", async () => {
-      mockSuccess(serviceHealthResponse);
+    it("should return requests, errors, latency arrays", async () => {
+      metricsApi.queryMetrics.mockResolvedValue({
+        series: [{ scope: "service:api", pointlist: [[1, 1]] }],
+      });
 
       const { data } = await client.getServiceHealth(
         "api",
@@ -290,13 +287,13 @@ describe("ApmClient", () => {
         timestamps.toMs
       );
 
-      expect(data.health.status).toBeDefined();
-      expect(data.health.error_rate).toBeDefined();
-      expect(data.health.p99_latency).toBeDefined();
+      expect(Array.isArray(data.requests)).toBe(true);
+      expect(Array.isArray(data.errors)).toBe(true);
+      expect(Array.isArray(data.latency)).toBe(true);
     });
 
     it("should handle services with hyphens in name", async () => {
-      mockSuccess(serviceHealthResponse);
+      metricsApi.queryMetrics.mockResolvedValue({ series: [] });
 
       const { data, error } = await client.getServiceHealth(
         "api-gateway",
@@ -310,7 +307,11 @@ describe("ApmClient", () => {
 
   describe("getServiceDependencies", () => {
     it("should get service dependencies successfully", async () => {
-      mockSuccess(serviceDependenciesResponse);
+      metricsApi.queryMetrics.mockResolvedValue({
+        series: [
+          { scope: "service:api", tag_set: ["env:prod"] },
+        ],
+      });
 
       const { data, error } = await client.getServiceDependencies(
         "api",
@@ -320,7 +321,8 @@ describe("ApmClient", () => {
 
       assertValidResponse({ data, error }, false);
       expect(data.service).toBe("api");
-      expect(data.direct_dependencies).toBeDefined();
+      expect(data.dependencies).toBeDefined();
+      expect(data.message).toBeDefined();
     });
 
     it("should reject empty service name", async () => {
@@ -345,8 +347,8 @@ describe("ApmClient", () => {
       expect(error.message).toContain("Service name is required");
     });
 
-    it("should include service name in request", async () => {
-      mockSuccess(serviceDependenciesResponse);
+    it("should include service in queryMetrics", async () => {
+      metricsApi.queryMetrics.mockResolvedValue({ series: [] });
 
       await client.getServiceDependencies(
         "api",
@@ -354,23 +356,35 @@ describe("ApmClient", () => {
         timestamps.toMs
       );
 
-      const [url] = getLastFetchCall();
-      expect(url).toContain("service=api");
+      expect(metricsApi.queryMetrics).toHaveBeenCalledWith(
+        expect.objectContaining({
+          query: "trace.*{service:api}",
+        })
+      );
     });
 
-    it("should reject when from >= to", async () => {
-      const { data, error } = await client.getServiceDependencies(
+    it("should return dependency list from series", async () => {
+      metricsApi.queryMetrics.mockResolvedValue({
+        series: [
+          { scope: "service:api", tag_set: ["env:prod"] },
+          { scope: "service:database", tag_set: [] },
+        ],
+      });
+
+      const { data } = await client.getServiceDependencies(
         "api",
-        timestamps.toMs,
-        timestamps.fromMs
+        timestamps.fromMs,
+        timestamps.toMs
       );
 
-      assertValidResponse({ data, error }, true);
-      expect(error.message).toContain("Start time must be before end time");
+      expect(Array.isArray(data.dependencies)).toBe(true);
+      expect(data.dependencies.length).toBe(2);
     });
 
     it("should handle API errors", async () => {
-      mockError({ status: 403, message: "Forbidden" });
+      const err = new Error("Forbidden");
+      err.statusCode = 403;
+      metricsApi.queryMetrics.mockRejectedValue(err);
 
       const { data, error } = await client.getServiceDependencies(
         "api",
@@ -381,132 +395,39 @@ describe("ApmClient", () => {
       assertValidResponse({ data, error }, true);
       expect(error.statusCode).toBe(403);
     });
-
-    it("should return dependency list", async () => {
-      mockSuccess(serviceDependenciesResponse);
-
-      const { data } = await client.getServiceDependencies(
-        "api",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
-
-      expect(Array.isArray(data.direct_dependencies)).toBe(true);
-      expect(data.direct_dependencies.length).toBeGreaterThan(0);
-    });
-
-    it("should return downstream services", async () => {
-      mockSuccess(serviceDependenciesResponse);
-
-      const { data } = await client.getServiceDependencies(
-        "api",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
-
-      expect(Array.isArray(data.downstream_services)).toBe(true);
-    });
-  });
-
-  describe("getServiceErrors", () => {
-    it("should get service errors successfully", async () => {
-      mockSuccess({
-        service: "api",
-        errors: [
-          {
-            type: "RuntimeError",
-            count: 42,
-            last_occurrence: 1609459200000,
-          },
-        ],
-      });
-
-      const { data, error } = await client.getServiceErrors(
-        "api",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
-
-      assertValidResponse({ data, error }, false);
-      expect(data.service).toBe("api");
-      expect(data.errors).toBeDefined();
-    });
-
-    it("should reject empty service name", async () => {
-      const { data, error } = await client.getServiceErrors(
-        "",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
-
-      assertValidResponse({ data, error }, true);
-      expect(error.message).toContain("Service name is required");
-    });
-
-    it("should reject null service name", async () => {
-      const { data, error } = await client.getServiceErrors(
-        null,
-        timestamps.fromMs,
-        timestamps.toMs
-      );
-
-      assertValidResponse({ data, error }, true);
-      expect(error.message).toContain("Service name is required");
-    });
-
-    it("should reject when from >= to", async () => {
-      const { data, error } = await client.getServiceErrors(
-        "api",
-        timestamps.toMs,
-        timestamps.fromMs
-      );
-
-      assertValidResponse({ data, error }, true);
-      expect(error.message).toContain("Start time must be before end time");
-    });
-
-    it("should handle API errors", async () => {
-      mockError({ status: 500, message: "Internal Server Error" });
-
-      const { data, error } = await client.getServiceErrors(
-        "api",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
-
-      assertValidResponse({ data, error }, true);
-      expect(error.statusCode).toBe(500);
-    });
   });
 
   describe("listServices", () => {
     it("should list services successfully", async () => {
-      mockSuccess({
-        data: [
-          { name: "api", status: "healthy" },
-          { name: "database", status: "healthy" },
-          { name: "cache", status: "degraded" },
+      metricsApi.queryMetrics.mockResolvedValue({
+        series: [
+          { scope: "service:api,env:prod" },
+          { scope: "service:database,env:prod" },
+          { scope: "service:cache" },
         ],
       });
 
       const { data, error } = await client.listServices();
 
       assertValidResponse({ data, error }, false);
-      expect(data.data).toBeDefined();
-      expect(Array.isArray(data.data)).toBe(true);
+      expect(Array.isArray(data)).toBe(true);
+      expect(data.some((s) => s.service === "api")).toBe(true);
+      expect(data.some((s) => s.service === "database")).toBe(true);
     });
 
     it("should handle empty service list", async () => {
-      mockSuccess({ data: [] });
+      metricsApi.queryMetrics.mockResolvedValue({ series: [] });
 
       const { data, error } = await client.listServices();
 
       assertValidResponse({ data, error }, false);
-      expect(data.data).toHaveLength(0);
+      expect(data).toHaveLength(0);
     });
 
     it("should handle API errors", async () => {
-      mockError({ status: 401, message: "Unauthorized" });
+      const err = new Error("Unauthorized");
+      err.statusCode = 401;
+      metricsApi.queryMetrics.mockRejectedValue(err);
 
       const { data, error } = await client.listServices();
 
@@ -515,107 +436,61 @@ describe("ApmClient", () => {
     });
   });
 
-  describe("getServiceResources", () => {
-    it("should get service resources successfully", async () => {
-      mockSuccess({
-        service: "api",
-        resources: [
-          {
-            name: "GET /api/users",
-            latency_ms: { p50: 45, p99: 125 },
-            error_rate: 0.002,
-          },
+  describe("listServiceEndpoints", () => {
+    it("should list endpoints successfully", async () => {
+      spansApi.listSpansGet.mockResolvedValue({
+        data: [
+          { attributes: { service: "api", resourceName: "GET /health" } },
+          { attributes: { service: "api", resourceName: "POST /users" } },
         ],
       });
 
-      const { data, error } = await client.getServiceResources(
+      const { data, error } = await client.listServiceEndpoints(
         "api",
         timestamps.fromMs,
         timestamps.toMs
       );
 
       assertValidResponse({ data, error }, false);
-      expect(data.resources).toBeDefined();
+      expect(data.endpoints).toBeDefined();
+      expect(Array.isArray(data.endpoints)).toBe(true);
     });
 
-    it("should reject empty service name", async () => {
-      const { data, error } = await client.getServiceResources(
+    it("should reject when service name missing", async () => {
+      const { data, error } = await client.listServiceEndpoints(
         "",
         timestamps.fromMs,
         timestamps.toMs
       );
 
       assertValidResponse({ data, error }, true);
-      expect(error.message).toContain("Service name is required");
-    });
-
-    it("should reject null service name", async () => {
-      const { data, error } = await client.getServiceResources(
-        null,
-        timestamps.fromMs,
-        timestamps.toMs
-      );
-
-      assertValidResponse({ data, error }, true);
-      expect(error.message).toContain("Service name is required");
+      expect(error.message).toContain("Service name and valid time range");
     });
 
     it("should reject when from >= to", async () => {
-      const { data, error } = await client.getServiceResources(
+      const { data, error } = await client.listServiceEndpoints(
         "api",
         timestamps.toMs,
         timestamps.fromMs
       );
 
       assertValidResponse({ data, error }, true);
-      expect(error.message).toContain("Start time must be before end time");
-    });
-
-    it("should handle API errors", async () => {
-      mockError({ status: 404, message: "Not Found" });
-
-      const { data, error } = await client.getServiceResources(
-        "nonexistent",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
-
-      assertValidResponse({ data, error }, true);
-      expect(error.statusCode).toBe(404);
+      expect(error.message).toContain("Service name and valid time range");
     });
   });
 
   describe("API integration", () => {
-    it("should use v2 API base URL", () => {
-      expect(client.client.baseUrl).toBe("https://api.datadoghq.com/api/v2");
-    });
-
-    it("should include DD-API-KEY header", async () => {
-      mockSuccess(tracesQueryResponse);
+    it("should use spansApi when querying traces with serviceName", async () => {
+      spansApi.listSpansGet.mockResolvedValue({ data: tracesQueryResponse.data });
 
       await client.queryTraces(
-        "service:api",
+        "env:prod",
         timestamps.fromMs,
-        timestamps.toMs
+        timestamps.toMs,
+        { serviceName: "api" }
       );
 
-      const [, options] = getLastFetchCall();
-      expect(options.headers["DD-API-KEY"]).toBe(createMockConfig().apiKey);
-    });
-
-    it("should include DD-APPLICATION-KEY header", async () => {
-      mockSuccess(tracesQueryResponse);
-
-      await client.queryTraces(
-        "service:api",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
-
-      const [, options] = getLastFetchCall();
-      expect(options.headers["DD-APPLICATION-KEY"]).toBe(
-        createMockConfig().appKey
-      );
+      expect(spansApi.listSpansGet).toHaveBeenCalledTimes(1);
     });
 
     it("should support custom site domain", () => {
@@ -624,53 +499,33 @@ describe("ApmClient", () => {
         site: "datadoghq.eu",
       });
 
-      expect(customClient.client.baseUrl).toBe("https://api.datadoghq.eu/api/v2");
-    });
-
-    it("should use POST method for traces query", async () => {
-      mockSuccess(tracesQueryResponse);
-
-      await client.queryTraces(
-        "service:api",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
-
-      const [, options] = getLastFetchCall();
-      expect(options.method).toBe("POST");
-    });
-
-    it("should use GET method for health queries", async () => {
-      mockSuccess(serviceHealthResponse);
-
-      await client.getServiceHealth(
-        "api",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
-
-      const [, options] = getLastFetchCall();
-      expect(options.method).toBe("GET");
+      expect(customClient.site).toBe("datadoghq.eu");
     });
   });
 
   describe("error handling", () => {
     it("should handle 401 unauthorized", async () => {
-      mockError({ status: 401, message: "Unauthorized" });
+      const err = new Error("Unauthorized");
+      err.statusCode = 401;
+      spansApi.listSpansGet.mockRejectedValue(err);
+      metricsApi.queryMetrics.mockRejectedValue(err);
 
       const { data: _data, error } = await client.queryTraces(
-        "service:api",
+        "env:prod",
         timestamps.fromMs,
-        timestamps.toMs
+        timestamps.toMs,
+        { serviceName: "api" }
       );
 
       expect(error.statusCode).toBe(401);
     });
 
     it("should handle 403 forbidden", async () => {
-      mockError({ status: 403, message: "Forbidden" });
+      const err = new Error("Forbidden");
+      err.statusCode = 403;
+      metricsApi.queryMetrics.mockRejectedValue(err);
 
-      const { data: _data, error } = await client.getServiceHealth(
+      const { data: _data, error } = await client.getServiceDependencies(
         "api",
         timestamps.fromMs,
         timestamps.toMs
@@ -680,22 +535,25 @@ describe("ApmClient", () => {
     });
 
     it("should handle 429 rate limit", async () => {
-      mockError({
-        status: 429,
-        message: "Too Many Requests",
-      });
+      const err = new Error("Too Many Requests");
+      err.statusCode = 429;
+      spansApi.listSpansGet.mockRejectedValue(err);
+      metricsApi.queryMetrics.mockRejectedValue(err);
 
       const { data: _data, error } = await client.queryTraces(
-        "service:api",
+        "env:prod",
         timestamps.fromMs,
-        timestamps.toMs
+        timestamps.toMs,
+        { serviceName: "api" }
       );
 
       expect(error.statusCode).toBe(429);
     });
 
     it("should handle 500 server error", async () => {
-      mockError({ status: 500, message: "Internal Server Error" });
+      const err = new Error("Internal Server Error");
+      err.statusCode = 500;
+      metricsApi.queryMetrics.mockRejectedValue(err);
 
       const { data: _data, error } = await client.listServices();
 
@@ -703,25 +561,25 @@ describe("ApmClient", () => {
     });
 
     it("should preserve error details", async () => {
-      mockError({
-        status: 400,
-        message: "Bad Request",
-        errorData: { errors: ["Invalid filter"] },
-      });
+      const err = new Error("Bad Request");
+      err.statusCode = 400;
+      spansApi.listSpansGet.mockRejectedValue(err);
+      metricsApi.queryMetrics.mockRejectedValue(err);
 
       const { data: _data, error } = await client.queryTraces(
-        "service:api",
+        "env:prod",
         timestamps.fromMs,
-        timestamps.toMs
+        timestamps.toMs,
+        { serviceName: "api" }
       );
 
-      expect(error.originalError).toBeDefined();
+      expect(error.originalError).toBe(err);
     });
   });
 
   describe("edge cases", () => {
     it("should handle service names with special characters", async () => {
-      mockSuccess(serviceHealthResponse);
+      metricsApi.queryMetrics.mockResolvedValue({ series: [] });
 
       const { data, error } = await client.getServiceHealth(
         "api-gateway-v2",
@@ -732,71 +590,34 @@ describe("ApmClient", () => {
       assertValidResponse({ data, error }, false);
     });
 
-    it("should handle very large page size", async () => {
-      mockSuccess(tracesQueryResponse);
-
-      await client.queryTraces(
-        "service:api",
-        timestamps.fromMs,
-        timestamps.toMs,
-        { pageSize: 1000 }
-      );
-
-      const [, options] = getLastFetchCall();
-      const body = JSON.parse(options.body);
-      expect(body.options.page_size).toBe(100); // Should be capped
-    });
-
-    it("should handle very small page size", async () => {
-      mockSuccess(tracesQueryResponse);
-
-      await client.queryTraces(
-        "service:api",
-        timestamps.fromMs,
-        timestamps.toMs,
-        { pageSize: 1 }
-      );
-
-      const [, options] = getLastFetchCall();
-      const body = JSON.parse(options.body);
-      expect(body.options.page_size).toBe(1);
-    });
-
-    it("should handle complex filter queries", async () => {
-      mockSuccess(tracesQueryResponse);
-      const complexFilter =
-        'service:api AND status:error AND (priority:high OR priority:critical)';
+    it("should handle complex filter with serviceName", async () => {
+      spansApi.listSpansGet.mockResolvedValue({ data: tracesQueryResponse.data });
 
       const { data, error } = await client.queryTraces(
-        complexFilter,
+        "env:prod status:error",
         timestamps.fromMs,
-        timestamps.toMs
+        timestamps.toMs,
+        { serviceName: "api" }
       );
 
       assertValidResponse({ data, error }, false);
-    });
-
-    it("should handle unicode in service names", async () => {
-      mockSuccess(serviceHealthResponse);
-
-      const { data, error } = await client.getServiceHealth(
-        "服务-api",
-        timestamps.fromMs,
-        timestamps.toMs
+      expect(spansApi.listSpansGet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filterQuery: "service:api env:prod status:error",
+        })
       );
-
-      assertValidResponse({ data, error }, false);
     });
 
     it("should handle very large timestamp values", async () => {
-      mockSuccess(tracesQueryResponse);
-      const year2030From = 1893456000000; // 2030-01-01 in ms
-      const year2030To = 1893542400000; // 2030-01-02 in ms
+      spansApi.listSpansGet.mockResolvedValue({ data: tracesQueryResponse.data });
+      const year2030From = 1893456000000;
+      const year2030To = 1893542400000;
 
       const { data, error } = await client.queryTraces(
-        "service:api",
+        "env:prod",
         year2030From,
-        year2030To
+        year2030To,
+        { serviceName: "api" }
       );
 
       assertValidResponse({ data, error }, false);

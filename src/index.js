@@ -132,7 +132,9 @@ async function main() {
     tools: toolDefinitions,
   }));
 
-  // Register tools/call handler using MCP SDK
+  // Register tools/call handler with timing for observability (RED: rate, errors, duration)
+  const SLOW_TOOL_MS = Number(process.env.MCP_SLOW_TOOL_MS) || 2000;
+
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     const handler = toolHandlers.get(name);
@@ -141,11 +143,32 @@ async function main() {
       throw new Error(`Tool not found: ${name}`);
     }
 
+    const start = performance.now();
     try {
       const result = await handler(args);
+      const durationMs = Math.round(performance.now() - start);
+      const slow = durationMs >= SLOW_TOOL_MS;
+      const logLine = JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: "info",
+        message: "tool_call",
+        tool: name,
+        durationMs,
+        slow,
+      });
+      console.error(logLine);
       return result;
     } catch (error) {
-      console.error(`Error calling tool ${name}: ${error?.message ?? String(error)}`);
+      const durationMs = Math.round(performance.now() - start);
+      const logLine = JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: "error",
+        message: "tool_call",
+        tool: name,
+        durationMs,
+        error: error?.message ?? String(error),
+      });
+      console.error(logLine);
       throw error;
     }
   });

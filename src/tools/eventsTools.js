@@ -3,6 +3,8 @@
  * Provides tools to search events and get detailed event information.
  */
 
+import { formatToolError } from "#utils/toolErrors.js";
+
 /**
  * Convert various time formats to Unix timestamp in seconds.
  * @param {number | string} time - Time value (Unix seconds, ISO 8601 string)
@@ -42,6 +44,10 @@ const searchEventsTool = {
     "Search for events in Datadog. Events can include monitor alerts, " +
     "deployments, integrations, and custom events. Useful for understanding " +
     "system changes and incidents.",
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
   inputSchema: {
     type: "object",
     properties: {
@@ -82,6 +88,10 @@ const getEventDetailsTool = {
   description:
     "Get detailed information about a specific event. " +
     "Returns full event data including timestamps, comments, and metadata.",
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
   inputSchema: {
     type: "object",
     properties: {
@@ -158,7 +168,7 @@ async function handleSearchEvents(input, client) {
         content: [
           {
             type: "text",
-            text: `Error searching events: ${error.message}`,
+            text: `Error searching events: ${formatToolError(error.message, error?.statusCode)}`,
           },
         ],
       };
@@ -201,7 +211,7 @@ async function handleSearchEvents(input, client) {
       content: [
         {
           type: "text",
-          text: `Error: ${error.message}`,
+          text: `Error: ${formatToolError(error?.message ?? String(error), error?.statusCode)}`,
         },
       ],
     };
@@ -247,7 +257,7 @@ async function handleGetEventDetails(input, client) {
         content: [
           {
             type: "text",
-            text: `Error retrieving event details: ${error.message}`,
+            text: `Error retrieving event details: ${formatToolError(error.message, error?.statusCode)}`,
           },
         ],
       };
@@ -276,7 +286,7 @@ async function handleGetEventDetails(input, client) {
       content: [
         {
           type: "text",
-          text: `Error: ${error.message}`,
+          text: `Error: ${formatToolError(error?.message ?? String(error), error?.statusCode)}`,
         },
       ],
     };

@@ -3,24 +3,29 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
+import { LogsClient } from "#clients/logsClient.js";
 import { getLogsTools } from "#tools/logsTools.js";
+import { mockDatadogApi } from "#test/mocks/datadogApi.js";
 import {
   clearMocks,
+  createMockConfig,
   createTestTimestamps,
-  MockApiClient,
 } from "#test/helpers.js";
 import { logsSearchResponse } from "#test/fixtures/datadogResponses.js";
 
 describe("Logs Tools", () => {
   let tools;
-  let mockClient;
+  let client;
   let timestamps;
+  const { logsApi } = mockDatadogApi;
 
   beforeEach(() => {
     clearMocks();
     timestamps = createTestTimestamps();
-    mockClient = new MockApiClient();
-    tools = getLogsTools(mockClient);
+    logsApi.listLogs.mockResolvedValue(logsSearchResponse);
+    logsApi.aggregateLogs.mockResolvedValue({ data: { aggregation: { avg: 42.5 } } });
+    client = new LogsClient(createMockConfig());
+    tools = getLogsTools(client);
   });
 
   describe("search_logs tool", () => {
@@ -31,10 +36,7 @@ describe("Logs Tools", () => {
     });
 
     it("should search logs successfully", async () => {
-      mockClient.responses["/logs/events/search"] = {
-        data: logsSearchResponse,
-        error: null,
-      };
+      logsApi.listLogs.mockResolvedValue(logsSearchResponse);
       const searchTool = tools.find((t) => t.name === "search_logs");
 
       const result = await searchTool.handler({
@@ -49,10 +51,7 @@ describe("Logs Tools", () => {
     });
 
     it("should handle empty filter", async () => {
-      mockClient.responses["/logs/events/search"] = {
-        data: logsSearchResponse,
-        error: null,
-      };
+      logsApi.listLogs.mockResolvedValue(logsSearchResponse);
       const searchTool = tools.find((t) => t.name === "search_logs");
 
       const result = await searchTool.handler({
@@ -77,10 +76,7 @@ describe("Logs Tools", () => {
     });
 
     it("should enforce page size limits", async () => {
-      mockClient.responses["/logs/events/search"] = {
-        data: logsSearchResponse,
-        error: null,
-      };
+      logsApi.listLogs.mockResolvedValue(logsSearchResponse);
       const searchTool = tools.find((t) => t.name === "search_logs");
 
       const result = await searchTool.handler({
@@ -94,10 +90,7 @@ describe("Logs Tools", () => {
     });
 
     it("should handle client errors", async () => {
-      mockClient.responses["/logs/events/search"] = {
-        data: null,
-        error: new Error("API Error"),
-      };
+      logsApi.listLogs.mockRejectedValue(new Error("API Error"));
       const searchTool = tools.find((t) => t.name === "search_logs");
 
       const result = await searchTool.handler({
@@ -118,18 +111,15 @@ describe("Logs Tools", () => {
     });
 
     it("should get log details successfully", async () => {
-      mockClient.responses["/logs/events"] = {
-        data: {
-          data: {
-            id: "AXvj0ZDn5d08oxCb7t9q",
-            attributes: {
-              message: "Test log",
-              service: "api",
-            },
-          },
+      const logEntry = {
+        id: "AXvj0ZDn5d08oxCb7t9q",
+        type: "logs",
+        attributes: {
+          message: "Test log",
+          service: "api",
         },
-        error: null,
       };
+      logsApi.listLogs.mockResolvedValue({ data: [logEntry] });
       const detailsTool = tools.find((t) => t.name === "get_log_details");
 
       const result = await detailsTool.handler({
@@ -150,10 +140,7 @@ describe("Logs Tools", () => {
     });
 
     it("should handle client errors", async () => {
-      mockClient.responses["/logs/events"] = {
-        data: null,
-        error: new Error("Not found"),
-      };
+      logsApi.listLogs.mockRejectedValue(new Error("Not found"));
       const detailsTool = tools.find((t) => t.name === "get_log_details");
 
       const result = await detailsTool.handler({
@@ -172,10 +159,7 @@ describe("Logs Tools", () => {
     });
 
     it("should aggregate logs with avg", async () => {
-      mockClient.responses["/logs/events/aggregate"] = {
-        data: { aggregation: { avg: 42.5 } },
-        error: null,
-      };
+      logsApi.aggregateLogs.mockResolvedValue({ data: { aggregation: { avg: 42.5 } } });
       const aggTool = tools.find((t) => t.name === "aggregate_logs");
 
       const result = await aggTool.handler({
@@ -189,10 +173,7 @@ describe("Logs Tools", () => {
     });
 
     it("should aggregate logs with max", async () => {
-      mockClient.responses["/logs/events/aggregate"] = {
-        data: { aggregation: { max: 100 } },
-        error: null,
-      };
+      logsApi.aggregateLogs.mockResolvedValue({ data: { aggregation: { max: 100 } } });
       const aggTool = tools.find((t) => t.name === "aggregate_logs");
 
       const result = await aggTool.handler({
@@ -233,10 +214,7 @@ describe("Logs Tools", () => {
     });
 
     it("should handle client errors", async () => {
-      mockClient.responses["/logs/events/aggregate"] = {
-        data: null,
-        error: new Error("API Error"),
-      };
+      logsApi.aggregateLogs.mockRejectedValue(new Error("API Error"));
       const aggTool = tools.find((t) => t.name === "aggregate_logs");
 
       const result = await aggTool.handler({
@@ -273,12 +251,13 @@ describe("Logs Tools", () => {
 
   describe("error responses", () => {
     it("should format errors correctly", async () => {
+      logsApi.listLogs.mockRejectedValue(new Error("API Error"));
       const searchTool = tools.find((t) => t.name === "search_logs");
 
       const result = await searchTool.handler({
         filter: "service:api",
-        from: timestamps.toMs,
-        to: timestamps.fromMs,
+        from: timestamps.fromMs,
+        to: timestamps.toMs,
       });
 
       expect(result.isError).toBe(true);
@@ -287,10 +266,7 @@ describe("Logs Tools", () => {
     });
 
     it("should format success responses correctly", async () => {
-      mockClient.responses["/logs/events/search"] = {
-        data: logsSearchResponse,
-        error: null,
-      };
+      logsApi.listLogs.mockResolvedValue(logsSearchResponse);
       const searchTool = tools.find((t) => t.name === "search_logs");
 
       const result = await searchTool.handler({

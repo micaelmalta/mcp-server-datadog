@@ -3,6 +3,8 @@
  * Provides tools to explore service dependencies and relationships.
  */
 
+import { formatToolError } from "#utils/toolErrors.js";
+
 /**
  * Get Service Dependencies tool definition.
  * @type {Object}
@@ -12,6 +14,10 @@ const getServiceDependenciesTool = {
   description:
     "Get service dependencies for a given environment. Returns all services and their relationships in the specified environment. " +
     "Useful for understanding service architecture and dependencies.",
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
   inputSchema: {
     type: "object",
     properties: {
@@ -39,6 +45,10 @@ const getServiceDependenciesMultiEnvTool = {
   description:
     "Get service dependencies across multiple environments. Returns service relationships " +
     "for each specified environment, useful for comparing architectures across prod, staging, dev, etc.",
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
   inputSchema: {
     type: "object",
     properties: {
@@ -86,7 +96,7 @@ async function handleGetServiceDependencies(input, client) {
         content: [
           {
             type: "text",
-            text: `Error retrieving service dependencies: ${error.message}`,
+            text: `Error retrieving service dependencies: ${formatToolError(error.message, error?.statusCode)}`,
           },
         ],
       };
@@ -132,7 +142,7 @@ async function handleGetServiceDependencies(input, client) {
       content: [
         {
           type: "text",
-          text: `Error: ${error.message}`,
+          text: `Error: ${formatToolError(error?.message ?? String(error), error?.statusCode)}`,
         },
       ],
     };
@@ -169,7 +179,7 @@ async function handleGetServiceDependenciesMultiEnv(input, client) {
         content: [
           {
             type: "text",
-            text: `Error retrieving service dependencies: ${error.message}`,
+            text: `Error retrieving service dependencies: ${formatToolError(error.message, error?.statusCode)}`,
           },
         ],
       };
@@ -214,7 +224,7 @@ async function handleGetServiceDependenciesMultiEnv(input, client) {
       content: [
         {
           type: "text",
-          text: `Error: ${error.message}`,
+          text: `Error: ${formatToolError(error?.message ?? String(error), error?.statusCode)}`,
         },
       ],
     };

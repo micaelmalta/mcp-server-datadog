@@ -1,9 +1,12 @@
 {
-  "name": "mcp-datadog",
+  "name": "mcp-server-datadog",
   "version": "1.0.0",
   "description": "Model Context Protocol server for Datadog API integration",
   "type": "module",
   "main": "src/index.js",
+  "bin": {
+    "mcp-server-datadog": "src/index.js"
+  },
   "engines": {
     "node": ">=20.20.0"
   },
@@ -13,6 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "benchmark": "vitest run test/benchmark --reporter=verbose",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

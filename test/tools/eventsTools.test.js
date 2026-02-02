@@ -3,24 +3,31 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
+import { EventsClient } from "#clients/eventsClient.js";
 import { getEventsTools } from "#tools/eventsTools.js";
+import { mockDatadogApi } from "#test/mocks/datadogApi.js";
 import {
   clearMocks,
+  createMockConfig,
   createTestTimestamps,
-  MockApiClient,
 } from "#test/helpers.js";
 import { eventsSearchResponse } from "#test/fixtures/datadogResponses.js";
 
 describe("Events Tools", () => {
   let tools;
-  let mockClient;
+  let client;
   let timestamps;
+  const { eventsApi } = mockDatadogApi;
 
   beforeEach(() => {
     clearMocks();
     timestamps = createTestTimestamps();
-    mockClient = new MockApiClient();
-    tools = getEventsTools(mockClient);
+    eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
+    eventsApi.getEvent.mockResolvedValue({
+      event: { id: 12345678, title: "Test event", text: "Event text" },
+    });
+    client = new EventsClient(createMockConfig());
+    tools = getEventsTools(client);
   });
 
   describe("search_events tool", () => {
@@ -30,10 +37,7 @@ describe("Events Tools", () => {
     });
 
     it("should search events successfully", async () => {
-      mockClient.responses["/events"] = {
-        data: eventsSearchResponse,
-        error: null,
-      };
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
       const searchTool = tools.find((t) => t.name === "search_events");
 
       const result = await searchTool.handler({
@@ -58,10 +62,7 @@ describe("Events Tools", () => {
     });
 
     it("should handle empty query", async () => {
-      mockClient.responses["/events"] = {
-        data: eventsSearchResponse,
-        error: null,
-      };
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
       const searchTool = tools.find((t) => t.name === "search_events");
 
       const result = await searchTool.handler({
@@ -81,10 +82,9 @@ describe("Events Tools", () => {
     });
 
     it("should get event details successfully", async () => {
-      mockClient.responses["/events"] = {
-        data: { event: { id: 12345678 } },
-        error: null,
-      };
+      eventsApi.getEvent.mockResolvedValue({
+        event: { id: 12345678, title: "Test", text: "Details" },
+      });
       const detailsTool = tools.find((t) => t.name === "get_event_details");
 
       const result = await detailsTool.handler({
@@ -95,10 +95,9 @@ describe("Events Tools", () => {
     });
 
     it("should handle numeric zero event ID", async () => {
-      mockClient.responses["/events"] = {
-        data: { event: { id: 0 } },
-        error: null,
-      };
+      eventsApi.getEvent.mockResolvedValue({
+        event: { id: 0, title: "Zero", text: "Event" },
+      });
       const detailsTool = tools.find((t) => t.name === "get_event_details");
 
       const result = await detailsTool.handler({
@@ -149,10 +148,7 @@ describe("Events Tools", () => {
     });
 
     it("should handle client errors", async () => {
-      mockClient.responses["/events"] = {
-        data: null,
-        error: new Error("API Error"),
-      };
+      eventsApi.listEvents.mockRejectedValue(new Error("API Error"));
       const searchTool = tools.find((t) => t.name === "search_events");
 
       const result = await searchTool.handler({

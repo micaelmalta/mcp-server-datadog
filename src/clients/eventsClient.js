@@ -60,7 +60,11 @@ export class EventsClient {
     } catch (error) {
       return {
         data: null,
-        error: new DatadogClientError(`HTTP ${error.statusCode || 500}: ${error.message}`),
+        error: new DatadogClientError(
+          `HTTP ${error.statusCode || 500}: ${error.message}`,
+          error.statusCode || 500,
+          error
+        ),
       };
     }
   }
@@ -84,7 +88,11 @@ export class EventsClient {
     } catch (error) {
       return {
         data: null,
-        error: new DatadogClientError(`HTTP ${error.statusCode || 500}: ${error.message}`),
+        error: new DatadogClientError(
+          `HTTP ${error.statusCode || 500}: ${error.message}`,
+          error.statusCode || 500,
+          error
+        ),
       };
     }
   }
@@ -117,7 +125,11 @@ export class EventsClient {
     } catch (error) {
       return {
         data: null,
-        error: new DatadogClientError(`HTTP ${error.statusCode || 500}: ${error.message}`),
+        error: new DatadogClientError(
+          `HTTP ${error.statusCode || 500}: ${error.message}`,
+          error.statusCode || 500,
+          error
+        ),
       };
     }
   }
@@ -192,7 +204,11 @@ export class EventsClient {
     } catch (error) {
       return {
         data: null,
-        error: new DatadogClientError(`HTTP ${error.statusCode || 500}: ${error.message}`),
+        error: new DatadogClientError(
+          `HTTP ${error.statusCode || 500}: ${error.message}`,
+          error.statusCode || 500,
+          error
+        ),
       };
     }
   }

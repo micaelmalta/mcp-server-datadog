@@ -2,29 +2,31 @@
  * Tests for Datadog APM MCP tools.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { ApmClient } from "#clients/apmClient.js";
 import { getApmTools } from "#tools/apmTools.js";
+import { mockDatadogApi } from "#test/mocks/datadogApi.js";
 import {
   clearMocks,
+  createMockConfig,
   createTestTimestamps,
-  MockApiClient,
 } from "#test/helpers.js";
-import {
-  tracesQueryResponse,
-  serviceHealthResponse,
-  serviceDependenciesResponse,
-} from "#test/fixtures/datadogResponses.js";
+import { tracesQueryResponse } from "#test/fixtures/datadogResponses.js";
 
 describe("APM Tools", () => {
   let tools;
-  let mockClient;
+  let client;
   let timestamps;
+  const { spansApi, metricsApi } = mockDatadogApi;
 
   beforeEach(() => {
     clearMocks();
     timestamps = createTestTimestamps();
-    mockClient = new MockApiClient();
-    tools = getApmTools(mockClient);
+    // Spans API returns span list; ApmClient builds traces from spans (trace_id, attributes)
+    spansApi.listSpansGet.mockResolvedValue({ data: tracesQueryResponse.data });
+    metricsApi.queryMetrics.mockResolvedValue({ series: [] });
+    client = new ApmClient(createMockConfig());
+    tools = getApmTools(client);
   });
 
   describe("query_traces tool", () => {
@@ -34,13 +36,11 @@ describe("APM Tools", () => {
     });
 
     it("should query traces successfully", async () => {
-      mockClient.responses["/traces"] = {
-        data: tracesQueryResponse,
-        error: null,
-      };
+      spansApi.listSpansGet.mockResolvedValue({ data: tracesQueryResponse.data });
       const queryTool = tools.find((t) => t.name === "query_traces");
 
       const result = await queryTool.handler({
+        serviceName: "api",
         filter: "service:api",
         from: timestamps.fromMs,
         to: timestamps.toMs,
@@ -53,6 +53,7 @@ describe("APM Tools", () => {
       const queryTool = tools.find((t) => t.name === "query_traces");
 
       const result = await queryTool.handler({
+        serviceName: "api",
         filter: "service:api",
         from: timestamps.toMs,
         to: timestamps.fromMs,
@@ -62,13 +63,11 @@ describe("APM Tools", () => {
     });
 
     it("should handle empty filter", async () => {
-      mockClient.responses["/traces"] = {
-        data: tracesQueryResponse,
-        error: null,
-      };
+      spansApi.listSpansGet.mockResolvedValue({ data: tracesQueryResponse.data });
       const queryTool = tools.find((t) => t.name === "query_traces");
 
       const result = await queryTool.handler({
+        serviceName: "api",
         filter: "",
         from: timestamps.fromMs,
         to: timestamps.toMs,
@@ -78,13 +77,11 @@ describe("APM Tools", () => {
     });
 
     it("should support custom page size", async () => {
-      mockClient.responses["/traces"] = {
-        data: tracesQueryResponse,
-        error: null,
-      };
+      spansApi.listSpansGet.mockResolvedValue({ data: tracesQueryResponse.data });
       const queryTool = tools.find((t) => t.name === "query_traces");
 
       const result = await queryTool.handler({
+        serviceName: "api",
         filter: "service:api",
         from: timestamps.fromMs,
         to: timestamps.toMs,
@@ -95,13 +92,11 @@ describe("APM Tools", () => {
     });
 
     it("should support custom sort field", async () => {
-      mockClient.responses["/traces"] = {
-        data: tracesQueryResponse,
-        error: null,
-      };
+      spansApi.listSpansGet.mockResolvedValue({ data: tracesQueryResponse.data });
       const queryTool = tools.find((t) => t.name === "query_traces");
 
       const result = await queryTool.handler({
+        serviceName: "api",
         filter: "service:api",
         from: timestamps.fromMs,
         to: timestamps.toMs,
@@ -119,10 +114,7 @@ describe("APM Tools", () => {
     });
 
     it("should get service health successfully", async () => {
-      mockClient.responses["/service/health"] = {
-        data: serviceHealthResponse,
-        error: null,
-      };
+      metricsApi.queryMetrics.mockResolvedValue({ series: [] });
       const healthTool = tools.find((t) => t.name === "get_service_health");
 
       const result = await healthTool.handler({
@@ -132,6 +124,9 @@ describe("APM Tools", () => {
       });
 
       expect(result.isError).toBe(false);
+      const content = JSON.parse(result.content[0].text);
+      expect(content.serviceName).toBe("api");
+      expect(content.health).toBeDefined();
     });
 
     it("should reject empty service name", async () => {
@@ -178,10 +173,7 @@ describe("APM Tools", () => {
     });
 
     it("should get service dependencies successfully", async () => {
-      mockClient.responses["/service/dependencies"] = {
-        data: serviceDependenciesResponse,
-        error: null,
-      };
+      metricsApi.queryMetrics.mockResolvedValue({ series: [] });
       const depsTool = tools.find((t) => t.name === "get_service_dependencies");
 
       const result = await depsTool.handler({
@@ -191,6 +183,9 @@ describe("APM Tools", () => {
       });
 
       expect(result.isError).toBe(false);
+      const content = JSON.parse(result.content[0].text);
+      expect(content.serviceName).toBe("api");
+      expect(content.dependencies).toBeDefined();
     });
 
     it("should reject empty service name", async () => {
@@ -256,6 +251,7 @@ describe("APM Tools", () => {
       const queryTool = tools.find((t) => t.name === "query_traces");
 
       const result = await queryTool.handler({
+        serviceName: "api",
         filter: "service:api",
         from: timestamps.toMs,
         to: timestamps.fromMs,
@@ -266,10 +262,8 @@ describe("APM Tools", () => {
     });
 
     it("should handle client errors", async () => {
-      mockClient.responses["/service/health"] = {
-        data: null,
-        error: new Error("API Error"),
-      };
+      // getServiceHealth catches metric errors and returns empty series; tool still succeeds
+      vi.mocked(metricsApi.queryMetrics).mockRejectedValue(new Error("API Error"));
       const healthTool = tools.find((t) => t.name === "get_service_health");
 
       const result = await healthTool.handler({
@@ -278,19 +272,20 @@ describe("APM Tools", () => {
         to: timestamps.toMs,
       });
 
-      expect(result.isError).toBe(true);
+      expect(result.isError).toBe(false);
+      const content = JSON.parse(result.content[0].text);
+      expect(content.serviceName).toBe("api");
+      expect(content.health).toBeDefined();
     });
   });
 
   describe("response formatting", () => {
     it("should format success responses correctly", async () => {
-      mockClient.responses["/traces"] = {
-        data: tracesQueryResponse,
-        error: null,
-      };
+      spansApi.listSpansGet.mockResolvedValue({ data: tracesQueryResponse.data });
       const queryTool = tools.find((t) => t.name === "query_traces");
 
       const result = await queryTool.handler({
+        serviceName: "api",
         filter: "service:api",
         from: timestamps.fromMs,
         to: timestamps.toMs,

@@ -79,7 +79,11 @@ export class LogsClient {
       Logger.error("LogsClient", "searchLogs error", error);
       return {
         data: null,
-        error: new DatadogClientError(`HTTP ${error.statusCode || 500}: ${error.message}`),
+        error: new DatadogClientError(
+          `HTTP ${error.statusCode || 500}: ${error.message}`,
+          error.statusCode || 500,
+          error
+        ),
       };
     }
   }
@@ -120,11 +124,16 @@ export class LogsClient {
       };
 
       const result = await this.logsApi.listLogs({ body });
-      return { data: result, error: null };
+      const firstLog = result?.data?.[0] ?? null;
+      return { data: firstLog, error: null };
     } catch (error) {
       return {
         data: null,
-        error: new DatadogClientError(`HTTP ${error.statusCode || 500}: ${error.message}`),
+        error: new DatadogClientError(
+          `HTTP ${error.statusCode || 500}: ${error.message}`,
+          error.statusCode || 500,
+          error
+        ),
       };
     }
   }
@@ -189,7 +198,11 @@ export class LogsClient {
       Logger.error("LogsClient", "aggregateLogs error", error);
       return {
         data: null,
-        error: new DatadogClientError(`HTTP ${error.statusCode || 500}: ${error.message}`),
+        error: new DatadogClientError(
+          `HTTP ${error.statusCode || 500}: ${error.message}`,
+          error.statusCode || 500,
+          error
+        ),
       };
     }
   }
@@ -216,7 +229,11 @@ export class LogsClient {
     } catch (error) {
       return {
         data: null,
-        error: new DatadogClientError(`HTTP ${error.statusCode || 500}: ${error.message}`),
+        error: new DatadogClientError(
+          `HTTP ${error.statusCode || 500}: ${error.message}`,
+          error.statusCode || 500,
+          error
+        ),
       };
     }
   }

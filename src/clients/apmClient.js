@@ -104,7 +104,18 @@ export class ApmClient {
           };
         } catch (_spanError) {
           // Fall back to trace metrics on any Spans API error (401, 403, 500, etc.)
-          return this._queryTracesFallbackMetrics(filter, from, to, limit);
+          try {
+            return await this._queryTracesFallbackMetrics(filter, from, to, limit);
+          } catch (fallbackError) {
+            return {
+              data: null,
+              error: new DatadogClientError(
+                `HTTP ${fallbackError.statusCode || 500}: ${fallbackError.message}`,
+                fallbackError.statusCode || 500,
+                fallbackError
+              ),
+            };
+          }
         }
       }
 
@@ -112,7 +123,11 @@ export class ApmClient {
     } catch (error) {
       return {
         data: null,
-        error: new DatadogClientError(`HTTP ${error.statusCode || 500}: ${error.message}`),
+        error: new DatadogClientError(
+          `HTTP ${error.statusCode || 500}: ${error.message}`,
+          error.statusCode || 500,
+          error
+        ),
       };
     }
   }
@@ -178,7 +193,11 @@ export class ApmClient {
         error:
           error instanceof DatadogClientError
             ? error
-            : new DatadogClientError(`HTTP ${error.statusCode || 500}: ${error.message}`),
+            : new DatadogClientError(
+                `HTTP ${error.statusCode || 500}: ${error.message}`,
+                error.statusCode || 500,
+                error
+              ),
       };
     }
   }
@@ -325,7 +344,11 @@ export class ApmClient {
         error:
           error instanceof DatadogClientError
             ? error
-            : new DatadogClientError(`HTTP ${error.statusCode || 500}: ${error.message}`),
+            : new DatadogClientError(
+                `HTTP ${error.statusCode || 500}: ${error.message}`,
+                error.statusCode || 500,
+                error
+              ),
       };
     }
   }
@@ -435,7 +458,11 @@ export class ApmClient {
     } catch (error) {
       return {
         data: null,
-        error: new DatadogClientError(`HTTP ${error.statusCode || 500}: ${error.message}`),
+        error: new DatadogClientError(
+          `HTTP ${error.statusCode || 500}: ${error.message}`,
+          error.statusCode || 500,
+          error
+        ),
       };
     }
   }
@@ -478,7 +505,11 @@ export class ApmClient {
     } catch (error) {
       return {
         data: null,
-        error: new DatadogClientError(`HTTP ${error.statusCode || 500}: ${error.message}`),
+        error: new DatadogClientError(
+          `HTTP ${error.statusCode || 500}: ${error.message}`,
+          error.statusCode || 500,
+          error
+        ),
       };
     }
   }
@@ -515,7 +546,11 @@ export class ApmClient {
     } catch (error) {
       return {
         data: null,
-        error: new DatadogClientError(`HTTP ${error.statusCode || 500}: ${error.message}`),
+        error: new DatadogClientError(
+          `HTTP ${error.statusCode || 500}: ${error.message}`,
+          error.statusCode || 500,
+          error
+        ),
       };
     }
   }

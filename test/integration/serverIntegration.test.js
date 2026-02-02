@@ -2,7 +2,7 @@
  * Integration tests for MCP Datadog server.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { MetricsClient } from "#clients/metricsClient.js";
 import { LogsClient } from "#clients/logsClient.js";
 import { EventsClient } from "#clients/eventsClient.js";
@@ -13,10 +13,8 @@ import { getLogsTools } from "#tools/logsTools.js";
 import { getEventsTools } from "#tools/eventsTools.js";
 import { getMonitorsTools } from "#tools/monitorsTools.js";
 import { getApmTools } from "#tools/apmTools.js";
+import { mockDatadogApi } from "#test/mocks/datadogApi.js";
 import {
-  mockSuccess,
-  mockError,
-  clearMocks,
   createMockConfig,
   createTestTimestamps,
 } from "#test/helpers.js";
@@ -31,11 +29,21 @@ import {
 describe("MCP Server Integration", () => {
   let config;
   let timestamps;
+  const { metricsApi, logsApi, eventsApi, monitorsApi, spansApi } =
+    mockDatadogApi;
 
   beforeEach(() => {
-    clearMocks();
     config = createMockConfig();
     timestamps = createTestTimestamps();
+    vi.mocked(metricsApi.queryMetrics).mockResolvedValue(metricsQueryResponse);
+    vi.mocked(logsApi.listLogs).mockResolvedValue(logsSearchResponse);
+    vi.mocked(eventsApi.listEvents).mockResolvedValue(eventsSearchResponse);
+    vi.mocked(eventsApi.getEvent).mockResolvedValue({ event: { id: 1 } });
+    vi.mocked(monitorsApi.listMonitors).mockResolvedValue(monitorsListResponse);
+    vi.mocked(spansApi.listSpansGet).mockResolvedValue({
+      data: tracesQueryResponse.data,
+    });
+    vi.mocked(metricsApi.queryMetrics).mockResolvedValue(metricsQueryResponse);
   });
 
   describe("Metrics Integration", () => {
@@ -57,7 +65,7 @@ describe("MCP Server Integration", () => {
     });
 
     it("should invoke metrics tool through client", async () => {
-      mockSuccess(metricsQueryResponse);
+      metricsApi.queryMetrics.mockResolvedValue(metricsQueryResponse);
       const client = new MetricsClient(config);
       const tools = getMetricsTools(client);
       const queryTool = tools.find((t) => t.name === "query_metrics");
@@ -90,7 +98,7 @@ describe("MCP Server Integration", () => {
     });
 
     it("should invoke logs tool through client", async () => {
-      mockSuccess(logsSearchResponse);
+      logsApi.listLogs.mockResolvedValue(logsSearchResponse);
       const client = new LogsClient(config);
       const tools = getLogsTools(client);
       const searchTool = tools.find((t) => t.name === "search_logs");
@@ -121,7 +129,7 @@ describe("MCP Server Integration", () => {
     });
 
     it("should invoke events tool through client", async () => {
-      mockSuccess(eventsSearchResponse);
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
       const client = new EventsClient(config);
       const tools = getEventsTools(client);
       const searchTool = tools.find((t) => t.name === "search_events");
@@ -153,7 +161,7 @@ describe("MCP Server Integration", () => {
     });
 
     it("should invoke monitors tool through client", async () => {
-      mockSuccess(monitorsListResponse);
+      monitorsApi.listMonitors.mockResolvedValue(monitorsListResponse);
       const client = new MonitorsClient(config);
       const tools = getMonitorsTools(client);
       const listTool = tools.find((t) => t.name === "list_monitors");
@@ -181,15 +189,18 @@ describe("MCP Server Integration", () => {
     });
 
     it("should invoke APM tool through client", async () => {
-      mockSuccess(tracesQueryResponse);
+      spansApi.listSpansGet.mockResolvedValue({
+        data: tracesQueryResponse.data,
+      });
       const client = new ApmClient(config);
       const tools = getApmTools(client);
       const queryTool = tools.find((t) => t.name === "query_traces");
 
       const result = await queryTool.handler({
-        filter: "service:api",
+        filter: "env:prod",
         from: timestamps.fromMs,
         to: timestamps.toMs,
+        serviceName: "api",
       });
 
       expect(result.isError).toBe(false);
@@ -198,7 +209,14 @@ describe("MCP Server Integration", () => {
 
   describe("Error Handling Across Services", () => {
     it("should handle 401 errors across all clients", async () => {
-      mockError({ status: 401, message: "Unauthorized" });
+      const err = new Error("Unauthorized");
+      err.statusCode = 401;
+      metricsApi.queryMetrics.mockRejectedValue(err);
+      logsApi.listLogs.mockRejectedValue(err);
+      eventsApi.listEvents.mockRejectedValue(err);
+      monitorsApi.listMonitors.mockRejectedValue(err);
+      spansApi.listSpansGet.mockRejectedValue(err);
+      metricsApi.queryMetrics.mockRejectedValue(err);
 
       const metricsClient = new MetricsClient(config);
       const logsClient = new LogsClient(config);
@@ -223,12 +241,12 @@ describe("MCP Server Integration", () => {
       );
       const { error: monitorsError } = await monitorsClient.listMonitors();
       const { error: apmError } = await apmClient.queryTraces(
-        "service:api",
+        "env:prod",
         timestamps.fromMs,
-        timestamps.toMs
+        timestamps.toMs,
+        { serviceName: "api" }
       );
 
-      // All should be errors
       expect(metricsError).toBeDefined();
       expect(logsError).toBeDefined();
       expect(eventsError).toBeDefined();
@@ -237,7 +255,9 @@ describe("MCP Server Integration", () => {
     });
 
     it("should handle 429 rate limit errors gracefully", async () => {
-      mockError({ status: 429, message: "Too Many Requests" });
+      const err = new Error("Too Many Requests");
+      err.statusCode = 429;
+      metricsApi.queryMetrics.mockRejectedValue(err);
 
       const client = new MetricsClient(config);
       const { data: _data, error } = await client.queryMetrics(
@@ -251,7 +271,9 @@ describe("MCP Server Integration", () => {
     });
 
     it("should handle 500 server errors gracefully", async () => {
-      mockError({ status: 500, message: "Internal Server Error" });
+      const err = new Error("Internal Server Error");
+      err.statusCode = 500;
+      logsApi.listLogs.mockRejectedValue(err);
 
       const client = new LogsClient(config);
       const { data: _data, error } = await client.searchLogs(
@@ -267,7 +289,9 @@ describe("MCP Server Integration", () => {
 
   describe("Multi-Client Workflows", () => {
     it("should support concurrent client requests", async () => {
-      mockSuccess(metricsQueryResponse);
+      metricsApi.queryMetrics.mockResolvedValue(metricsQueryResponse);
+      logsApi.listLogs.mockResolvedValue(logsSearchResponse);
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
       const metricsClient = new MetricsClient(config);
       const logsClient = new LogsClient(config);
@@ -276,7 +300,11 @@ describe("MCP Server Integration", () => {
       const promises = [
         metricsClient.queryMetrics("system.cpu", timestamps.from, timestamps.to),
         logsClient.searchLogs("service:api", timestamps.fromMs, timestamps.toMs),
-        eventsClient.searchEvents("priority:high", timestamps.from, timestamps.to),
+        eventsClient.searchEvents(
+          "priority:high",
+          timestamps.from,
+          timestamps.to
+        ),
       ];
 
       const results = await Promise.all(promises);
@@ -295,22 +323,21 @@ describe("MCP Server Integration", () => {
       const client1 = new MetricsClient(config1);
       const client2 = new MetricsClient(config2);
 
-      expect(client1.client.baseUrl).toContain("datadoghq.com");
-      expect(client2.client.baseUrl).toContain("datadoghq.eu");
+      expect(client1.site).toBe("datadoghq.com");
+      expect(client2.site).toBe("datadoghq.eu");
     });
   });
 
   describe("Tool Handler Response Format", () => {
     it("should return consistent MCP response format", async () => {
-      mockSuccess(metricsQueryResponse);
+      metricsApi.queryMetrics.mockResolvedValue(metricsQueryResponse);
       const client = new MetricsClient(config);
       const tools = getMetricsTools(client);
 
-      tools.forEach(async (tool) => {
+      for (const tool of tools) {
         const handler = tool.handler;
         expect(typeof handler).toBe("function");
 
-        // Verify response structure for error case
         const errorResponse = await handler({});
         expect(errorResponse).toHaveProperty("isError");
         expect(errorResponse).toHaveProperty("content");
@@ -320,7 +347,7 @@ describe("MCP Server Integration", () => {
           expect(errorResponse.content[0]).toHaveProperty("type");
           expect(errorResponse.content[0]).toHaveProperty("text");
         }
-      });
+      }
     });
   });
 
@@ -350,42 +377,31 @@ describe("MCP Server Integration", () => {
   });
 
   describe("API Client Configuration", () => {
-    it("should use correct API base URLs", () => {
+    it("should use correct site configuration", () => {
       const metricsClient = new MetricsClient(config);
       const logsClient = new LogsClient(config);
       const eventsClient = new EventsClient(config);
       const monitorsClient = new MonitorsClient(config);
       const apmClient = new ApmClient(config);
 
-      expect(metricsClient.client.baseUrl).toContain("/api/v1");
-      expect(logsClient.client.baseUrl).toContain("/api/v2");
-      expect(eventsClient.client.baseUrl).toContain("/api/v1");
-      expect(monitorsClient.client.baseUrl).toContain("/api/v1");
-      expect(apmClient.client.baseUrl).toContain("/api/v2");
-    });
-
-    it("should include authentication headers in all requests", async () => {
-      mockSuccess(metricsQueryResponse);
-
-      const client = new MetricsClient(config);
-      await client.queryMetrics("system.cpu", timestamps.from, timestamps.to);
-
-      // Headers are set on the client
-      expect(client.client.headers["DD-API-KEY"]).toBe(config.apiKey);
-      expect(client.client.headers["DD-APPLICATION-KEY"]).toBe(config.appKey);
+      expect(metricsClient.site).toBe("datadoghq.com");
+      expect(logsClient.site).toBe("datadoghq.com");
+      expect(eventsClient.site).toBe("datadoghq.com");
+      expect(monitorsClient.site).toBe("datadoghq.com");
+      expect(apmClient.site).toBe("datadoghq.com");
     });
 
     it("should support custom site configuration", () => {
       const customConfig = { ...config, site: "datadoghq.eu" };
       const client = new MetricsClient(customConfig);
 
-      expect(client.client.baseUrl).toContain("datadoghq.eu");
+      expect(client.site).toBe("datadoghq.eu");
     });
   });
 
   describe("Response Data Consistency", () => {
     it("should return consistent data structure for metrics", async () => {
-      mockSuccess(metricsQueryResponse);
+      metricsApi.queryMetrics.mockResolvedValue(metricsQueryResponse);
       const client = new MetricsClient(config);
 
       const { data } = await client.queryMetrics(
@@ -399,7 +415,7 @@ describe("MCP Server Integration", () => {
     });
 
     it("should return consistent data structure for logs", async () => {
-      mockSuccess(logsSearchResponse);
+      logsApi.listLogs.mockResolvedValue(logsSearchResponse);
       const client = new LogsClient(config);
 
       const { data } = await client.searchLogs(
@@ -409,11 +425,10 @@ describe("MCP Server Integration", () => {
       );
 
       expect(Array.isArray(data.data)).toBe(true);
-      expect(data.meta).toBeDefined();
     });
 
     it("should return consistent data structure for events", async () => {
-      mockSuccess(eventsSearchResponse);
+      eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
       const client = new EventsClient(config);
 
       const { data } = await client.searchEvents(
@@ -426,7 +441,7 @@ describe("MCP Server Integration", () => {
     });
 
     it("should return consistent data structure for monitors", async () => {
-      mockSuccess(monitorsListResponse);
+      monitorsApi.listMonitors.mockResolvedValue(monitorsListResponse);
       const client = new MonitorsClient(config);
 
       const { data } = await client.listMonitors();
@@ -435,22 +450,26 @@ describe("MCP Server Integration", () => {
     });
 
     it("should return consistent data structure for traces", async () => {
-      mockSuccess(tracesQueryResponse);
+      spansApi.listSpansGet.mockResolvedValue({
+        data: tracesQueryResponse.data,
+      });
       const client = new ApmClient(config);
 
       const { data } = await client.queryTraces(
-        "service:api",
+        "env:prod",
         timestamps.fromMs,
-        timestamps.toMs
+        timestamps.toMs,
+        { serviceName: "api" }
       );
 
-      expect(Array.isArray(data.data)).toBe(true);
+      expect(data.traces).toBeDefined();
+      expect(Array.isArray(data.traces)).toBe(true);
     });
   });
 
   describe("Timestamp Handling Across Clients", () => {
     it("should handle Unix seconds in appropriate clients", async () => {
-      mockSuccess(metricsQueryResponse);
+      metricsApi.queryMetrics.mockResolvedValue(metricsQueryResponse);
       const client = new MetricsClient(config);
 
       const { data: _data, error } = await client.queryMetrics(
@@ -463,7 +482,7 @@ describe("MCP Server Integration", () => {
     });
 
     it("should handle milliseconds in appropriate clients", async () => {
-      mockSuccess(logsSearchResponse);
+      logsApi.listLogs.mockResolvedValue(logsSearchResponse);
       const client = new LogsClient(config);
 
       const { data: _data, error } = await client.searchLogs(

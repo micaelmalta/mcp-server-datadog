@@ -42,15 +42,29 @@ vi.mock("@datadog/datadog-api-client", () => ({
     })),
   },
   v1: {
-    MetricsApi: vi.fn(() => instances.metricsApi),
-    MonitorsApi: vi.fn(() => instances.monitorsApi),
-    EventsApi: vi.fn(() => instances.eventsApi),
-    LogsIndexesApi: vi.fn(() => instances.logsIndexesApi),
+    MetricsApi: vi.fn(function MetricsApi() {
+      return instances.metricsApi;
+    }),
+    MonitorsApi: vi.fn(function MonitorsApi() {
+      return instances.monitorsApi;
+    }),
+    EventsApi: vi.fn(function EventsApi() {
+      return instances.eventsApi;
+    }),
+    LogsIndexesApi: vi.fn(function LogsIndexesApi() {
+      return instances.logsIndexesApi;
+    }),
   },
   v2: {
-    LogsApi: vi.fn(() => instances.logsApi),
-    SpansApi: vi.fn(() => instances.spansApi),
-    APMRetentionFiltersApi: vi.fn(() => instances.apmRetentionFiltersApi),
+    LogsApi: vi.fn(function LogsApi() {
+      return instances.logsApi;
+    }),
+    SpansApi: vi.fn(function SpansApi() {
+      return instances.spansApi;
+    }),
+    APMRetentionFiltersApi: vi.fn(function APMRetentionFiltersApi() {
+      return instances.apmRetentionFiltersApi;
+    }),
   },
 }));
 

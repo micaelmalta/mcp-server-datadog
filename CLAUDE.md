@@ -8,7 +8,7 @@ MCP Datadog is a Node.js Model Context Protocol (MCP) server that exposes Datado
 
 ## Tech Stack
 
-- **Runtime**: Node.js 20.20.0+ (ES modules)
+- **Runtime**: Node.js 22+ (ES modules)
 - **Language**: JavaScript with JSDoc type hints (NO TypeScript)
 - **MCP Framework**: @modelcontextprotocol/sdk
 - **Datadog SDK**: @datadog/datadog-api-client
@@ -91,7 +91,9 @@ const toolDefinition = {
   destructiveHint: false,
   idempotentHint: true,
   openWorldHint: true,
-  inputSchema: { /* JSON schema */ },
+  inputSchema: {
+    /* JSON schema */
+  },
 };
 
 const handler = async (args) => {
@@ -142,25 +144,26 @@ it("should query metrics", async () => {
 ```
 
 Run single test file:
+
 ```bash
 npm test -- test/clients/metricsClient.test.js
 ```
 
 ## Development Commands
 
-| Command | Purpose |
-|---------|---------|
-| `npm start` | Run MCP server (stdio transport) |
-| `npm run dev` | Run with NODE_ENV=local |
-| `npm test` | Run all tests once |
-| `npm test -- <file>` | Run single test file |
-| `npm run test:watch` | Run tests in watch mode |
-| `npm run test:coverage` | Run with coverage report |
-| `npm run benchmark` | Run tool handler benchmarks |
-| `npm run lint` | Check code style (ESLint) |
-| `npm run lint:fix` | Auto-fix lint issues |
-| `npm run format` | Format with Prettier |
-| `npm run validate` | Run lint + test (pre-commit) |
+| Command                 | Purpose                          |
+| ----------------------- | -------------------------------- |
+| `npm start`             | Run MCP server (stdio transport) |
+| `npm run dev`           | Run with NODE_ENV=local          |
+| `npm test`              | Run all tests once               |
+| `npm test -- <file>`    | Run single test file             |
+| `npm run test:watch`    | Run tests in watch mode          |
+| `npm run test:coverage` | Run with coverage report         |
+| `npm run benchmark`     | Run tool handler benchmarks      |
+| `npm run lint`          | Check code style (ESLint)        |
+| `npm run lint:fix`      | Auto-fix lint issues             |
+| `npm run format`        | Format with Prettier             |
+| `npm run validate`      | Run lint + test (pre-commit)     |
 
 ## Adding Features
 
@@ -289,6 +292,7 @@ Conventional commits required:
 - `chore(scope): description` - Maintenance
 
 Examples:
+
 - `feat(tools): add service dependencies tool`
 - `fix(clients): handle 429 rate limit errors`
 - `test(integration): add end-to-end server tests`

@@ -11,7 +11,7 @@
     "mcp-server-datadog": "src/index.js"
   },
   "engines": {
-    "node": ">=20.20.0"
+    "node": ">=22.0.0"
   },
   "scripts": {
     "start": "node src/index.js",
@@ -27,18 +27,22 @@
   },
   "dependencies": {
     "@datadog/datadog-api-client": "^1.51.0",
-    "@modelcontextprotocol/sdk": "^1.0.0",
-    "dotenv": "^16.4.5"
+    "@modelcontextprotocol/sdk": "^1.25.3",
+    "dotenv": "^17.2.3"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^2.1.1",
-    "eslint": "^8.57.0",
-    "eslint-config-prettier": "^9.1.0",
+    "@eslint/eslintrc": "^3.3.3",
+    "@eslint/js": "^9.39.2",
+    "@vitest/coverage-v8": "^4.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^10.0.0",
     "eslint-config-standard": "^17.1.0",
     "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-n": "^17.23.2",
     "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-promise": "^6.1.1",
+    "eslint-plugin-promise": "^7.0.0",
+    "globals": "^17.3.0",
     "prettier": "^3.3.3",
-    "vitest": "^2.1.1"
+    "vitest": "^4.0.0"
   }
 }

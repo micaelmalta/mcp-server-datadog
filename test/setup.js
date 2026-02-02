@@ -3,8 +3,8 @@ import { beforeEach, afterEach } from "vitest";
 import { installMockFetch, clearMocks } from "./helpers.js";
 import "./mocks/datadogApi.js";
 
-// Load environment variables from .env.example for testing
-config({ path: ".env.example" });
+// Load environment variables from .env.example for testing (quiet: suppress dotenv 17 tips)
+config({ path: ".env.example", quiet: true });
 
 // Set up test environment variables
 process.env.NODE_ENV = "test";

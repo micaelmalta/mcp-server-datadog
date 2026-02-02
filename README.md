@@ -17,7 +17,7 @@ The server provides MCP tools for:
 
 ### Prerequisites
 
-- Node.js 20.20.0+
+- Node.js 22+
 - npm
 
 ### Run with npx (recommended)
@@ -121,7 +121,7 @@ mcp_datadog/
 └── package.json
 ```
 
-**Tech stack:** Node.js 20+, JavaScript (ESM), JSDoc, Vitest, ESLint, Prettier, [@modelcontextprotocol/sdk](https://github.com/modelcontextprotocol/sdk), [@datadog/datadog-api-client](https://github.com/DataDog/datadog-api-client-typescript).
+**Tech stack:** Node.js 22+, JavaScript (ESM), JSDoc, Vitest, ESLint, Prettier, [@modelcontextprotocol/sdk](https://github.com/modelcontextprotocol/sdk), [@datadog/datadog-api-client](https://github.com/DataDog/datadog-api-client-typescript).
 
 ## Development
 

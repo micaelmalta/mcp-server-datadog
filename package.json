@@ -4,6 +4,9 @@
   "description": "Model Context Protocol server for Datadog API integration",
   "type": "module",
   "main": "src/index.js",
+  "imports": {
+    "#utils/*": "./src/utils/*"
+  },
   "bin": {
     "mcp-server-datadog": "src/index.js"
   },

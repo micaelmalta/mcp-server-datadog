@@ -1,0 +1,14 @@
+# Dev and test
+test/
+coverage/
+*.log
+
+# Config (not needed at runtime)
+.eslintrc.cjs
+.prettierrc.json
+jsconfig.json
+vitest.config.js
+
+# Project docs (not needed for npx run)
+CLAUDE.md
+context/

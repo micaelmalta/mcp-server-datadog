@@ -20,34 +20,58 @@ The server provides MCP tools for:
 - Node.js 20.20.0+
 - npm
 
-### Install and configure
+### Run with npx (recommended)
+
+No clone or install needed. Add the server to your MCP client (e.g. Cursor, Claude) using **stdio** and run it from GitHub:
+
+```json
+{
+  "datadog": {
+    "type": "stdio",
+    "command": "npx",
+    "args": ["-y", "github:micaelmalta/mcp-server-datadog"],
+    "env": {
+      "DATADOG_API_KEY": "your_api_key",
+      "DATADOG_APP_KEY": "your_app_key"
+    }
+  }
+}
+```
+
+Set `DATADOG_API_KEY` and `DATADOG_APP_KEY` (and optionally `DATADOG_SITE`, default `datadoghq.com`). Restart the client so the tools appear.
+
+To try from the terminal:
 
 ```bash
-git clone <repo-url>
-cd mcp_datadog
+DATADOG_API_KEY=your_key DATADOG_APP_KEY=your_app_key npx -y github:micaelmalta/mcp-server-datadog
+```
+
+### Run from source
+
+For development or a fixed install:
+
+```bash
+git clone https://github.com/micaelmalta/mcp-server-datadog.git
+cd mcp-server-datadog
 npm install
 cp .env.example .env
 ```
 
-Edit `.env` and set `DATADOG_API_KEY` and `DATADOG_APP_KEY`. Optionally set `DATADOG_SITE` (default `datadoghq.com`).
-
-### Run
+Edit `.env` and set `DATADOG_API_KEY` and `DATADOG_APP_KEY`. Then:
 
 ```bash
 npm start
 # or with NODE_ENV=local: npm run dev
 ```
 
-Add the server to your MCP client (e.g. Cursor, Claude) using **stdio** and the command `node src/index.js` (or `node /path/to/mcp_datadog/src/index.js`). Restart the client so the tools appear.
-
-### MCP config example
+In your MCP config, use **stdio** with `node` and the path to the entry point:
 
 ```json
 {
   "datadog": {
     "type": "stdio",
     "command": "node",
-    "args": ["/path/to/mcp_datadog/src/index.js"],
+    "args": ["/path/to/mcp-server-datadog/src/index.js"],
     "env": {
       "DATADOG_API_KEY": "your_api_key",
       "DATADOG_APP_KEY": "your_app_key"

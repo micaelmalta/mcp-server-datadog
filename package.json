@@ -19,6 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "vitest run -c vitest.e2e.config.js",
     "benchmark": "vitest run test/benchmark --reporter=verbose",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",

@@ -127,18 +127,19 @@ mcp_datadog/
 
 ### Commands
 
-| Command                 | Description                         |
-| ----------------------- | ----------------------------------- |
-| `npm start`             | Run server                          |
-| `npm run dev`           | Run with NODE_ENV=local             |
-| `npm test`              | Run tests                           |
-| `npm run test:watch`    | Tests in watch mode                 |
-| `npm run test:coverage` | Tests with coverage                 |
-| `npm run benchmark`     | Run tool-handler benchmark (mocked) |
-| `npm run lint`          | Lint                                |
-| `npm run lint:fix`      | Fix lint issues                     |
-| `npm run format`        | Format with Prettier                |
-| `npm run validate`      | Lint + test                         |
+| Command                 | Description                             |
+| ----------------------- | --------------------------------------- |
+| `npm start`             | Run server                              |
+| `npm run dev`           | Run with NODE_ENV=local                 |
+| `npm test`              | Run tests                               |
+| `npm run test:watch`    | Tests in watch mode                     |
+| `npm run test:coverage` | Tests with coverage                     |
+| `npm run test:e2e`      | E2E tests (real Datadog API; see below) |
+| `npm run benchmark`     | Run tool-handler benchmark (mocked)     |
+| `npm run lint`          | Lint                                    |
+| `npm run lint:fix`      | Fix lint issues                         |
+| `npm run format`        | Format with Prettier                    |
+| `npm run validate`      | Lint + test                             |
 
 ### API client pattern
 
@@ -157,11 +158,24 @@ if (error) {
 
 Tests use Vitest with mocked Datadog SDK (`test/mocks/datadogApi.js`) and fixtures in `test/fixtures/`. Run `npm test` before committing.
 
+**E2E tests** (`test/e2e/`) run against the real Datadog API. They are skipped unless `RUN_E2E=1` and real `DATADOG_API_KEY`/`DATADOG_APP_KEY` are set in `.env`. Example: `RUN_E2E=1 npm run test:e2e`. Use this to verify that document-center production error logs are visible (e.g. `logsDocumentCenter.e2e.test.js`).
+
 ## Operational notes
 
 - **Logging:** Tool calls are logged to **stderr** as JSON lines (`tool`, `durationMs`, `slow`). Optional: set `MCP_SLOW_TOOL_MS` (default 2000) to mark slow calls. Some clients also write to `mcp_datadog.log` (see `src/utils/logger.js`).
 - **Rate limiting:** The server does not rate limit; high tool usage can hit Datadog API limits.
-- **Troubleshooting:** Tools missing → check MCP config and env vars, restart client. 403/404 → permissions or plan. No data → check time range and filter syntax.
+- **Troubleshooting:** Tools missing → check MCP config and env vars, restart client. 403/404 → permissions or plan. See [Troubleshooting](#troubleshooting) for "no data" cases.
+
+## Troubleshooting
+
+### Search returns 0 logs but I expect data
+
+If `search_logs` (or `aggregate_logs`) returns no results for a service you know has traffic:
+
+1. **Same Datadog org** – The MCP server uses `DATADOG_API_KEY`, `DATADOG_APP_KEY`, and optionally `DATADOG_SITE`. Ensure these point to the **same** Datadog org and site where your app (e.g. document-center) sends logs.
+2. **Compare in Datadog** – In [Datadog Logs Explorer](https://docs.datadoghq.com/logs/explorer/), run the **same filter and time range** (e.g. `service:document-center env:production status:error`, last 7 days). If you see logs there but not via MCP, the env/site or keys are likely different.
+3. **Exact filter syntax** – Confirm the attribute names and values your app sends (e.g. `service`, `env`, `status`). Try without `env:production` or with `env:prod`, or search only `service:document-center` to see if any logs appear.
+4. **Retention and indexes** – Logs must be in an index that your API key can read; check [log indexes](https://docs.datadoghq.com/logs/indexes/) and retention.
 
 ## Documentation
 

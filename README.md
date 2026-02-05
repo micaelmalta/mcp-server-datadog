@@ -139,7 +139,7 @@ mcp_datadog/
 | `npm run lint`          | Lint                                    |
 | `npm run lint:fix`      | Fix lint issues                         |
 | `npm run format`        | Format with Prettier                    |
-| `npm run format:check`  | Check formatting (used in CI)          |
+| `npm run format:check`  | Check formatting (used in CI)           |
 | `npm run validate`      | Lint + test                             |
 
 ### API client pattern

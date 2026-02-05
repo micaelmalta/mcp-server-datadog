@@ -6,15 +6,8 @@ import { mockDatadogApi } from "#test/mocks/datadogApi.js";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { MetricsClient } from "#clients/metricsClient.js";
 import { DatadogClientError } from "#utils/errors.js";
-import {
-  createMockConfig,
-  createTestTimestamps,
-  assertValidResponse,
-} from "#test/helpers.js";
-import {
-  metricsQueryResponse,
-  metricMetadataResponse,
-} from "#test/fixtures/datadogResponses.js";
+import { createMockConfig, createTestTimestamps, assertValidResponse } from "#test/helpers.js";
+import { metricsQueryResponse, metricMetadataResponse } from "#test/fixtures/datadogResponses.js";
 
 describe("MetricsClient", () => {
   let client;
@@ -71,22 +64,14 @@ describe("MetricsClient", () => {
     });
 
     it("should handle empty query error", async () => {
-      const { data, error } = await client.queryMetrics(
-        "",
-        timestamps.from,
-        timestamps.to
-      );
+      const { data, error } = await client.queryMetrics("", timestamps.from, timestamps.to);
 
       assertValidResponse({ data, error }, true);
       expect(error.message).toContain("Query parameter is required");
     });
 
     it("should handle null query error", async () => {
-      const { data, error } = await client.queryMetrics(
-        null,
-        timestamps.from,
-        timestamps.to
-      );
+      const { data, error } = await client.queryMetrics(null, timestamps.from, timestamps.to);
 
       assertValidResponse({ data, error }, true);
       expect(error.message).toContain("Query parameter is required");
@@ -163,9 +148,7 @@ describe("MetricsClient", () => {
 
       await client.queryMetrics(query, timestamps.from, timestamps.to);
 
-      expect(metricsApi.queryMetrics).toHaveBeenCalledWith(
-        expect.objectContaining({ query })
-      );
+      expect(metricsApi.queryMetrics).toHaveBeenCalledWith(expect.objectContaining({ query }));
     });
 
     it("should handle responses with multiple series", async () => {
@@ -315,9 +298,7 @@ describe("MetricsClient", () => {
 
       await client.listMetrics("cpu");
 
-      expect(metricsApi.listMetrics).toHaveBeenCalledWith(
-        expect.objectContaining({ q: "cpu" })
-      );
+      expect(metricsApi.listMetrics).toHaveBeenCalledWith(expect.objectContaining({ q: "cpu" }));
     });
 
     it("should not include query parameter when empty", async () => {
@@ -325,9 +306,7 @@ describe("MetricsClient", () => {
 
       await client.listMetrics("");
 
-      expect(metricsApi.listMetrics).toHaveBeenCalledWith(
-        expect.objectContaining({ q: "*" })
-      );
+      expect(metricsApi.listMetrics).toHaveBeenCalledWith(expect.objectContaining({ q: "*" }));
     });
 
     it("should handle empty results", async () => {

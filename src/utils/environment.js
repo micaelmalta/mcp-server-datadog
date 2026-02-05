@@ -13,9 +13,7 @@ config();
 export function loadEnvironmentVariable(key) {
   const value = process.env[key];
   if (!value) {
-    throw new MissingEnvironmentVariable(
-      `Required environment variable "${key}" is not set`
-    );
+    throw new MissingEnvironmentVariable(`Required environment variable "${key}" is not set`);
   }
   return value;
 }
@@ -43,9 +41,6 @@ export function getConfiguration() {
     datadogRegion: loadOptionalEnvironmentVariable("DATADOG_REGION", "us1"),
     nodeEnv: loadOptionalEnvironmentVariable("NODE_ENV", "local"),
     mcpServerName: loadOptionalEnvironmentVariable("MCP_SERVER_NAME", "datadog"),
-    mcpServerVersion: loadOptionalEnvironmentVariable(
-      "MCP_SERVER_VERSION",
-      "1.0.0"
-    ),
+    mcpServerVersion: loadOptionalEnvironmentVariable("MCP_SERVER_VERSION", "1.0.0"),
   };
 }

@@ -6,11 +6,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { EventsClient } from "#clients/eventsClient.js";
 import { getEventsTools } from "#tools/eventsTools.js";
 import { mockDatadogApi } from "#test/mocks/datadogApi.js";
-import {
-  clearMocks,
-  createMockConfig,
-  createTestTimestamps,
-} from "#test/helpers.js";
+import { clearMocks, createMockConfig, createTestTimestamps } from "#test/helpers.js";
 import { eventsSearchResponse } from "#test/fixtures/datadogResponses.js";
 
 describe("Events Tools", () => {

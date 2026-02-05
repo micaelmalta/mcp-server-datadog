@@ -53,8 +53,7 @@ const queryMetricsTool = {
       metricName: {
         type: "string",
         description:
-          'Metric name to query (e.g., "system.cpu.user", ' +
-          '"avg:system.memory.free")',
+          'Metric name to query (e.g., "system.cpu.user", ' + '"avg:system.memory.free")',
       },
       from: {
         oneOf: [{ type: "number" }, { type: "string" }],
@@ -65,14 +64,12 @@ const queryMetricsTool = {
       to: {
         oneOf: [{ type: "number" }, { type: "string" }],
         description:
-          "End time as Unix timestamp in seconds or ISO 8601 string " +
-          "(must be after 'from')",
+          "End time as Unix timestamp in seconds or ISO 8601 string " + "(must be after 'from')",
       },
       filter: {
         type: "string",
         description:
-          "Optional filter expression to scope the metric " +
-          "(e.g., 'host:web-1', 'env:prod')",
+          "Optional filter expression to scope the metric " + "(e.g., 'host:web-1', 'env:prod')",
       },
     },
     required: ["metricName", "from", "to"],
@@ -165,8 +162,7 @@ async function handleQueryMetrics(input, client) {
       };
     }
 
-    const metricName =
-      typeof input.metricName === "string" ? input.metricName.trim() : "";
+    const metricName = typeof input.metricName === "string" ? input.metricName.trim() : "";
     if (!metricName) {
       return {
         isError: true,
@@ -181,7 +177,7 @@ async function handleQueryMetrics(input, client) {
 
     // Sanitize filter: disallow characters that could break or inject into metric query
     const filter = input.filter && typeof input.filter === "string" ? input.filter : "";
-    if (filter && (/[{}]/.test(filter))) {
+    if (filter && /[{}]/.test(filter)) {
       return {
         isError: true,
         content: [

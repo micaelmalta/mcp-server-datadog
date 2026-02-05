@@ -41,7 +41,12 @@ export class LogsClient {
    */
   async searchLogs(filter = "", from, to, pageSize = 10) {
     try {
-      Logger.log("LogsClient", "searchLogs called", { filter, pageSize, from: new Date(from).toISOString(), to: new Date(to).toISOString() });
+      Logger.log("LogsClient", "searchLogs called", {
+        filter,
+        pageSize,
+        from: new Date(from).toISOString(),
+        to: new Date(to).toISOString(),
+      });
 
       if (from >= to) {
         Logger.log("LogsClient", "Invalid time range", { from, to });

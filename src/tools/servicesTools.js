@@ -23,8 +23,7 @@ const getServiceDependenciesTool = {
     properties: {
       env: {
         type: "string",
-        description:
-          'The environment to query (e.g., "production", "staging", "development")',
+        description: 'The environment to query (e.g., "production", "staging", "development")',
       },
       serviceName: {
         type: "string",

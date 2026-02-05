@@ -64,19 +64,17 @@ const queryTracesTool = {
       },
       from: {
         oneOf: [{ type: "number" }, { type: "string" }],
-        description:
-          "Start time as Unix timestamp (seconds/ms) or ISO 8601 string",
+        description: "Start time as Unix timestamp (seconds/ms) or ISO 8601 string",
       },
       to: {
         oneOf: [{ type: "number" }, { type: "string" }],
         description:
-          "End time as Unix timestamp (seconds/ms) or ISO 8601 string " +
-          "(must be after 'from')",
+          "End time as Unix timestamp (seconds/ms) or ISO 8601 string " + "(must be after 'from')",
       },
       filter: {
         type: "string",
         description:
-          "Optional trace filter (e.g., \"status:error\", \"http.status_code:500\"). " +
+          'Optional trace filter (e.g., "status:error", "http.status_code:500"). ' +
           "Use Datadog trace query syntax.",
       },
       limit: {
@@ -112,18 +110,15 @@ const getServiceHealthTool = {
       },
       from: {
         oneOf: [{ type: "number" }, { type: "string" }],
-        description:
-          "Start time as Unix timestamp (seconds/ms) or ISO 8601 string",
+        description: "Start time as Unix timestamp (seconds/ms) or ISO 8601 string",
       },
       to: {
         oneOf: [{ type: "number" }, { type: "string" }],
-        description:
-          "End time as Unix timestamp (seconds/ms) or ISO 8601 string",
+        description: "End time as Unix timestamp (seconds/ms) or ISO 8601 string",
       },
       env: {
         type: "string",
-        description:
-          "Optional environment to scope metrics (e.g. production, staging)",
+        description: "Optional environment to scope metrics (e.g. production, staging)",
       },
     },
     required: ["serviceName", "from", "to"],
@@ -149,18 +144,15 @@ const getServiceDependenciesTool = {
     properties: {
       serviceName: {
         type: "string",
-        description:
-          'Name of the service to get dependencies for (e.g., "api", "checkout")',
+        description: 'Name of the service to get dependencies for (e.g., "api", "checkout")',
       },
       from: {
         oneOf: [{ type: "number" }, { type: "string" }],
-        description:
-          "Start time as Unix timestamp (seconds/ms) or ISO 8601 string",
+        description: "Start time as Unix timestamp (seconds/ms) or ISO 8601 string",
       },
       to: {
         oneOf: [{ type: "number" }, { type: "string" }],
-        description:
-          "End time as Unix timestamp (seconds/ms) or ISO 8601 string",
+        description: "End time as Unix timestamp (seconds/ms) or ISO 8601 string",
       },
     },
     required: ["serviceName", "from", "to"],
@@ -312,12 +304,9 @@ async function handleGetServiceHealth(input, client) {
       };
     }
 
-    const { data, error } = await client.getServiceHealth(
-      input.serviceName,
-      from,
-      to,
-      { env: input.env }
-    );
+    const { data, error } = await client.getServiceHealth(input.serviceName, from, to, {
+      env: input.env,
+    });
 
     if (error) {
       console.error("Get service health error:", error);
@@ -405,11 +394,7 @@ async function handleGetServiceDependencies(input, client) {
       };
     }
 
-    const { data, error } = await client.getServiceDependencies(
-      input.serviceName,
-      from,
-      to
-    );
+    const { data, error } = await client.getServiceDependencies(input.serviceName, from, to);
 
     if (error) {
       console.error("Get service dependencies error:", error);

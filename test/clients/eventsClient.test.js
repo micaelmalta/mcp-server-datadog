@@ -5,11 +5,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { EventsClient } from "#clients/eventsClient.js";
 import { mockDatadogApi } from "#test/mocks/datadogApi.js";
-import {
-  createMockConfig,
-  createTestTimestamps,
-  assertValidResponse,
-} from "#test/helpers.js";
+import { createMockConfig, createTestTimestamps, assertValidResponse } from "#test/helpers.js";
 import { eventsSearchResponse } from "#test/fixtures/datadogResponses.js";
 
 describe("EventsClient", () => {
@@ -51,11 +47,7 @@ describe("EventsClient", () => {
     it("should include query as tags in listEvents call", async () => {
       eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
-      await client.searchEvents(
-        "priority:high",
-        timestamps.from,
-        timestamps.to
-      );
+      await client.searchEvents("priority:high", timestamps.from, timestamps.to);
 
       expect(eventsApi.listEvents).toHaveBeenCalledWith({
         start: Math.floor(timestamps.from),
@@ -67,16 +59,10 @@ describe("EventsClient", () => {
     it("should handle empty query", async () => {
       eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
-      const { data, error } = await client.searchEvents(
-        "",
-        timestamps.from,
-        timestamps.to
-      );
+      const { data, error } = await client.searchEvents("", timestamps.from, timestamps.to);
 
       assertValidResponse({ data, error }, false);
-      expect(eventsApi.listEvents).toHaveBeenCalledWith(
-        expect.objectContaining({ tags: "" })
-      );
+      expect(eventsApi.listEvents).toHaveBeenCalledWith(expect.objectContaining({ tags: "" }));
     });
 
     it("should reject when from >= to", async () => {
@@ -133,11 +119,7 @@ describe("EventsClient", () => {
     it("should include multiple events in response", async () => {
       eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
-      const { data } = await client.searchEvents(
-        "priority:high",
-        timestamps.from,
-        timestamps.to
-      );
+      const { data } = await client.searchEvents("priority:high", timestamps.from, timestamps.to);
 
       expect(data.events.length).toBeGreaterThan(1);
     });
@@ -238,11 +220,7 @@ describe("EventsClient", () => {
     it("should include monitor_id in tags", async () => {
       eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
-      await client.getMonitorEvents(
-        1234567,
-        timestamps.from,
-        timestamps.to
-      );
+      await client.getMonitorEvents(1234567, timestamps.from, timestamps.to);
 
       expect(eventsApi.listEvents).toHaveBeenCalledWith(
         expect.objectContaining({ tags: "monitor_id:1234567" })
@@ -252,21 +230,13 @@ describe("EventsClient", () => {
     it("should handle numeric zero monitor ID", async () => {
       eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
-      const { data, error } = await client.getMonitorEvents(
-        0,
-        timestamps.from,
-        timestamps.to
-      );
+      const { data, error } = await client.getMonitorEvents(0, timestamps.from, timestamps.to);
 
       assertValidResponse({ data, error }, false);
     });
 
     it("should reject null monitor ID", async () => {
-      const { data, error } = await client.getMonitorEvents(
-        null,
-        timestamps.from,
-        timestamps.to
-      );
+      const { data, error } = await client.getMonitorEvents(null, timestamps.from, timestamps.to);
 
       assertValidResponse({ data, error }, true);
       expect(error.message).toContain("Monitor ID is required");
@@ -301,11 +271,7 @@ describe("EventsClient", () => {
     it("should include alert_type in tags", async () => {
       eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
-      await client.searchEventsByAlertType(
-        "warning",
-        timestamps.from,
-        timestamps.to
-      );
+      await client.searchEventsByAlertType("warning", timestamps.from, timestamps.to);
 
       expect(eventsApi.listEvents).toHaveBeenCalledWith(
         expect.objectContaining({ tags: "alert_type:warning" })
@@ -379,11 +345,7 @@ describe("EventsClient", () => {
     it("should include all tags in query", async () => {
       eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
-      await client.searchEventsByTags(
-        ["env:prod", "service:api"],
-        timestamps.from,
-        timestamps.to
-      );
+      await client.searchEventsByTags(["env:prod", "service:api"], timestamps.from, timestamps.to);
 
       expect(eventsApi.listEvents).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -405,22 +367,14 @@ describe("EventsClient", () => {
     });
 
     it("should reject null tags array", async () => {
-      const { data, error } = await client.searchEventsByTags(
-        null,
-        timestamps.from,
-        timestamps.to
-      );
+      const { data, error } = await client.searchEventsByTags(null, timestamps.from, timestamps.to);
 
       assertValidResponse({ data, error }, true);
       expect(error.message).toContain("At least one tag is required");
     });
 
     it("should reject empty tags array", async () => {
-      const { data, error } = await client.searchEventsByTags(
-        [],
-        timestamps.from,
-        timestamps.to
-      );
+      const { data, error } = await client.searchEventsByTags([], timestamps.from, timestamps.to);
 
       assertValidResponse({ data, error }, true);
       expect(error.message).toContain("At least one tag is required");
@@ -467,11 +421,7 @@ describe("EventsClient", () => {
     it("should use eventsApi when searching", async () => {
       eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
-      await client.searchEvents(
-        "priority:high",
-        timestamps.from,
-        timestamps.to
-      );
+      await client.searchEvents("priority:high", timestamps.from, timestamps.to);
 
       expect(eventsApi.listEvents).toHaveBeenCalledTimes(1);
     });
@@ -562,8 +512,7 @@ describe("EventsClient", () => {
   describe("edge cases", () => {
     it("should handle complex event queries", async () => {
       eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
-      const complexQuery =
-        "priority:high AND (alert_type:error OR alert_type:warning)";
+      const complexQuery = "priority:high AND (alert_type:error OR alert_type:warning)";
 
       const { data, error } = await client.searchEvents(
         complexQuery,
@@ -579,11 +528,7 @@ describe("EventsClient", () => {
       const year2000From = 946684800; // 2000-01-01
       const year2000To = 946771200; // 2000-01-02
 
-      const { data, error } = await client.searchEvents(
-        "priority:high",
-        year2000From,
-        year2000To
-      );
+      const { data, error } = await client.searchEvents("priority:high", year2000From, year2000To);
 
       assertValidResponse({ data, error }, false);
     });
@@ -599,11 +544,7 @@ describe("EventsClient", () => {
         ],
       });
 
-      const { data } = await client.searchEvents(
-        "priority:high",
-        timestamps.from,
-        timestamps.to
-      );
+      const { data } = await client.searchEvents("priority:high", timestamps.from, timestamps.to);
 
       expect(data.events[0].title).toContain("日本語");
     });
@@ -611,11 +552,7 @@ describe("EventsClient", () => {
     it("should handle responses with tags", async () => {
       eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
 
-      const { data } = await client.searchEvents(
-        "priority:high",
-        timestamps.from,
-        timestamps.to
-      );
+      const { data } = await client.searchEvents("priority:high", timestamps.from, timestamps.to);
 
       expect(data.events[0].tags).toBeDefined();
       expect(Array.isArray(data.events[0].tags)).toBe(true);

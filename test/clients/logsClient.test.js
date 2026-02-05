@@ -46,11 +46,7 @@ describe("LogsClient", () => {
     it("should include filter in request", async () => {
       logsApi.listLogs.mockResolvedValue(logsSearchResponse);
 
-      await client.searchLogs(
-        "service:api status:error",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
+      await client.searchLogs("service:api status:error", timestamps.fromMs, timestamps.toMs);
 
       expect(logsApi.listLogs).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -64,11 +60,7 @@ describe("LogsClient", () => {
     it("should handle empty filter query", async () => {
       logsApi.listLogs.mockResolvedValue(logsSearchResponse);
 
-      const { data, error } = await client.searchLogs(
-        "",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
+      const { data, error } = await client.searchLogs("", timestamps.fromMs, timestamps.toMs);
 
       assertValidResponse({ data, error }, false);
       expect(logsApi.listLogs).toHaveBeenCalledWith(
@@ -83,11 +75,7 @@ describe("LogsClient", () => {
     it("should handle default page size", async () => {
       logsApi.listLogs.mockResolvedValue(logsSearchResponse);
 
-      await client.searchLogs(
-        "service:api",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
+      await client.searchLogs("service:api", timestamps.fromMs, timestamps.toMs);
 
       expect(logsApi.listLogs).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -101,12 +89,7 @@ describe("LogsClient", () => {
     it("should include custom page size", async () => {
       logsApi.listLogs.mockResolvedValue(logsSearchResponse);
 
-      await client.searchLogs(
-        "service:api",
-        timestamps.fromMs,
-        timestamps.toMs,
-        50
-      );
+      await client.searchLogs("service:api", timestamps.fromMs, timestamps.toMs, 50);
 
       expect(logsApi.listLogs).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -207,11 +190,7 @@ describe("LogsClient", () => {
     it("should include timestamp sorting", async () => {
       logsApi.listLogs.mockResolvedValue(logsSearchResponse);
 
-      await client.searchLogs(
-        "service:api",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
+      await client.searchLogs("service:api", timestamps.fromMs, timestamps.toMs);
 
       expect(logsApi.listLogs).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -228,12 +207,8 @@ describe("LogsClient", () => {
       await client.searchLogs("service:api", fromFloat, toFloat);
 
       const call = logsApi.listLogs.mock.calls[0][0];
-      expect(call.body.filter.from).toBe(
-        new Date(Math.floor(fromFloat)).toISOString()
-      );
-      expect(call.body.filter.to).toBe(
-        new Date(Math.floor(toFloat)).toISOString()
-      );
+      expect(call.body.filter.from).toBe(new Date(Math.floor(fromFloat)).toISOString());
+      expect(call.body.filter.to).toBe(new Date(Math.floor(toFloat)).toISOString());
     });
   });
 
@@ -453,19 +428,12 @@ describe("LogsClient", () => {
     it("should include aggregation type in request", async () => {
       logsApi.aggregateLogs.mockResolvedValue({ aggregation: { avg: 50 } });
 
-      await client.aggregateLogs(
-        "service:api",
-        timestamps.fromMs,
-        timestamps.toMs,
-        "max"
-      );
+      await client.aggregateLogs("service:api", timestamps.fromMs, timestamps.toMs, "max");
 
       expect(logsApi.aggregateLogs).toHaveBeenCalledWith(
         expect.objectContaining({
           body: expect.objectContaining({
-            compute: expect.arrayContaining([
-              expect.objectContaining({ aggregation: "max" }),
-            ]),
+            compute: expect.arrayContaining([expect.objectContaining({ aggregation: "max" })]),
           }),
         })
       );
@@ -547,11 +515,7 @@ describe("LogsClient", () => {
     it("should call listLogs with correct config", async () => {
       logsApi.listLogs.mockResolvedValue(logsSearchResponse);
 
-      await client.searchLogs(
-        "service:api",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
+      await client.searchLogs("service:api", timestamps.fromMs, timestamps.toMs);
 
       expect(logsApi.listLogs).toHaveBeenCalled();
     });
@@ -559,11 +523,7 @@ describe("LogsClient", () => {
     it("should use SDK for search", async () => {
       logsApi.listLogs.mockResolvedValue(logsSearchResponse);
 
-      await client.searchLogs(
-        "service:api",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
+      await client.searchLogs("service:api", timestamps.fromMs, timestamps.toMs);
 
       expect(logsApi.listLogs).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -670,19 +630,14 @@ describe("LogsClient", () => {
       const year2030From = 1893456000000; // 2030-01-01 in ms
       const year2030To = 1893542400000; // 2030-01-02 in ms
 
-      const { data, error } = await client.searchLogs(
-        "service:api",
-        year2030From,
-        year2030To
-      );
+      const { data, error } = await client.searchLogs("service:api", year2030From, year2030To);
 
       assertValidResponse({ data, error }, false);
     });
 
     it("should handle complex filter queries", async () => {
       logsApi.listLogs.mockResolvedValue(logsSearchResponse);
-      const complexFilter =
-        'service:api AND status:error AND (host:web-01 OR host:web-02)';
+      const complexFilter = "service:api AND status:error AND (host:web-01 OR host:web-02)";
 
       const { data, error } = await client.searchLogs(
         complexFilter,

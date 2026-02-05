@@ -6,11 +6,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ApmClient } from "#clients/apmClient.js";
 import { getApmTools } from "#tools/apmTools.js";
 import { mockDatadogApi } from "#test/mocks/datadogApi.js";
-import {
-  clearMocks,
-  createMockConfig,
-  createTestTimestamps,
-} from "#test/helpers.js";
+import { clearMocks, createMockConfig, createTestTimestamps } from "#test/helpers.js";
 import { tracesQueryResponse } from "#test/fixtures/datadogResponses.js";
 
 describe("APM Tools", () => {

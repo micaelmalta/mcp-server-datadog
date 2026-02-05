@@ -6,11 +6,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { LogsClient } from "#clients/logsClient.js";
 import { getLogsTools } from "#tools/logsTools.js";
 import { mockDatadogApi } from "#test/mocks/datadogApi.js";
-import {
-  clearMocks,
-  createMockConfig,
-  createTestTimestamps,
-} from "#test/helpers.js";
+import { clearMocks, createMockConfig, createTestTimestamps } from "#test/helpers.js";
 import { logsSearchResponse } from "#test/fixtures/datadogResponses.js";
 
 describe("Logs Tools", () => {

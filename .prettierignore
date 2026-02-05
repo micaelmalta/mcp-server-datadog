@@ -1,0 +1,9 @@
+# Dependencies and build
+node_modules
+
+# Coverage and artifacts
+coverage
+*.min.js
+
+# Local / IDE
+.claude

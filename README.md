@@ -139,6 +139,7 @@ mcp_datadog/
 | `npm run lint`          | Lint                                    |
 | `npm run lint:fix`      | Fix lint issues                         |
 | `npm run format`        | Format with Prettier                    |
+| `npm run format:check`  | Check formatting (used in CI)           |
 | `npm run validate`      | Lint + test                             |
 
 ### API client pattern
@@ -153,6 +154,10 @@ if (error) {
   console.log(data);
 }
 ```
+
+### CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on push and pull requests to `main`/`master`: format check (`prettier --check`), lint (ESLint), and tests. Same commands locally: `npm run format:check && npm run lint && npm test`.
 
 ### Testing
 

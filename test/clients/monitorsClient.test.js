@@ -5,14 +5,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { MonitorsClient } from "#clients/monitorsClient.js";
 import { mockDatadogApi } from "#test/mocks/datadogApi.js";
-import {
-  createMockConfig,
-  assertValidResponse,
-} from "#test/helpers.js";
-import {
-  monitorsListResponse,
-  monitorStatusResponse,
-} from "#test/fixtures/datadogResponses.js";
+import { createMockConfig, assertValidResponse } from "#test/helpers.js";
+import { monitorsListResponse, monitorStatusResponse } from "#test/fixtures/datadogResponses.js";
 
 describe("MonitorsClient", () => {
   let client;
@@ -621,12 +615,7 @@ describe("MonitorsClient", () => {
     it("should handle monitor type variations", async () => {
       monitorsApi.listMonitors.mockResolvedValue([]);
 
-      const types = [
-        "metric alert",
-        "service check",
-        "event alert",
-        "composite",
-      ];
+      const types = ["metric alert", "service check", "event alert", "composite"];
 
       for (const type of types) {
         await client.listMonitors({ monitorType: type });

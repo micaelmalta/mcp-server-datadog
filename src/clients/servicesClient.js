@@ -128,7 +128,12 @@ export class ServicesClient extends ApiClient {
               : error.message?.includes("404")
                 ? 404
                 : null;
-        if (status === 403 || status === 404 || error.message?.includes("403") || error.message?.includes("404")) {
+        if (
+          status === 403 ||
+          status === 404 ||
+          error.message?.includes("403") ||
+          error.message?.includes("404")
+        ) {
           return {
             data: {
               dependencies: [],

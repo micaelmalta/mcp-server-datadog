@@ -98,8 +98,7 @@ export class ApiClient {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new DatadogClientError(
-          errorData.error?.message ||
-            `HTTP ${response.status}: ${response.statusText}`,
+          errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`,
           response.status,
           new Error(JSON.stringify(errorData))
         );
@@ -112,18 +111,10 @@ export class ApiClient {
       }
 
       if (error.name === "AbortError") {
-        throw new DatadogClientError(
-          `Request timeout after ${this.timeout}ms`,
-          null,
-          error
-        );
+        throw new DatadogClientError(`Request timeout after ${this.timeout}ms`, null, error);
       }
 
-      throw new DatadogClientError(
-        error.message || "Unknown request error",
-        null,
-        error
-      );
+      throw new DatadogClientError(error.message || "Unknown request error", null, error);
     }
   }
 }

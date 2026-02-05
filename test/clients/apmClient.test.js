@@ -5,11 +5,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ApmClient } from "#clients/apmClient.js";
 import { mockDatadogApi } from "#test/mocks/datadogApi.js";
-import {
-  createMockConfig,
-  createTestTimestamps,
-  assertValidResponse,
-} from "#test/helpers.js";
+import { createMockConfig, createTestTimestamps, assertValidResponse } from "#test/helpers.js";
 import { tracesQueryResponse } from "#test/fixtures/datadogResponses.js";
 
 describe("ApmClient", () => {
@@ -23,9 +19,7 @@ describe("ApmClient", () => {
     // Default: spans API returns span list (client builds traces from it)
     spansApi.listSpansGet.mockResolvedValue({ data: tracesQueryResponse.data });
     metricsApi.queryMetrics.mockResolvedValue({
-      series: [
-        { scope: "service:api", tag_set: ["env:prod"], pointlist: [[1, 1]] },
-      ],
+      series: [{ scope: "service:api", tag_set: ["env:prod"], pointlist: [[1, 1]] }],
     });
     client = new ApmClient(createMockConfig());
     timestamps = createTestTimestamps();
@@ -51,12 +45,9 @@ describe("ApmClient", () => {
     it("should call listSpansGet with filter and service when provided", async () => {
       spansApi.listSpansGet.mockResolvedValue({ data: tracesQueryResponse.data });
 
-      await client.queryTraces(
-        "env:prod",
-        timestamps.fromMs,
-        timestamps.toMs,
-        { serviceName: "api" }
-      );
+      await client.queryTraces("env:prod", timestamps.fromMs, timestamps.toMs, {
+        serviceName: "api",
+      });
 
       expect(spansApi.listSpansGet).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -70,16 +61,10 @@ describe("ApmClient", () => {
 
     it("should use fallback metrics when no serviceName and empty filter", async () => {
       metricsApi.queryMetrics.mockResolvedValue({
-        series: [
-          { scope: "env:prod", tag_set: [], pointlist: [[1, 1]] },
-        ],
+        series: [{ scope: "env:prod", tag_set: [], pointlist: [[1, 1]] }],
       });
 
-      const { data, error } = await client.queryTraces(
-        "",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
+      const { data, error } = await client.queryTraces("", timestamps.fromMs, timestamps.toMs);
 
       assertValidResponse({ data, error }, false);
       expect(data.traces).toBeDefined();
@@ -90,12 +75,10 @@ describe("ApmClient", () => {
     it("should support custom page size", async () => {
       spansApi.listSpansGet.mockResolvedValue({ data: tracesQueryResponse.data });
 
-      await client.queryTraces(
-        "env:prod",
-        timestamps.fromMs,
-        timestamps.toMs,
-        { serviceName: "api", pageSize: 50 }
-      );
+      await client.queryTraces("env:prod", timestamps.fromMs, timestamps.toMs, {
+        serviceName: "api",
+        pageSize: 50,
+      });
 
       expect(spansApi.listSpansGet).toHaveBeenCalledWith(
         expect.objectContaining({ pageLimit: 50 })
@@ -105,12 +88,10 @@ describe("ApmClient", () => {
     it("should enforce maximum page size of 100", async () => {
       spansApi.listSpansGet.mockResolvedValue({ data: tracesQueryResponse.data });
 
-      await client.queryTraces(
-        "env:prod",
-        timestamps.fromMs,
-        timestamps.toMs,
-        { serviceName: "api", pageSize: 200 }
-      );
+      await client.queryTraces("env:prod", timestamps.fromMs, timestamps.toMs, {
+        serviceName: "api",
+        pageSize: 200,
+      });
 
       expect(spansApi.listSpansGet).toHaveBeenCalledWith(
         expect.objectContaining({ pageLimit: 100 })
@@ -183,12 +164,9 @@ describe("ApmClient", () => {
       ];
       spansApi.listSpansGet.mockResolvedValue({ data: twoTraces });
 
-      const { data } = await client.queryTraces(
-        "env:prod",
-        timestamps.fromMs,
-        timestamps.toMs,
-        { serviceName: "api" }
-      );
+      const { data } = await client.queryTraces("env:prod", timestamps.fromMs, timestamps.toMs, {
+        serviceName: "api",
+      });
 
       expect(data.traces.length).toBeGreaterThanOrEqual(1);
     });
@@ -212,11 +190,7 @@ describe("ApmClient", () => {
     });
 
     it("should reject empty service name", async () => {
-      const { data, error } = await client.getServiceHealth(
-        "",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
+      const { data, error } = await client.getServiceHealth("", timestamps.fromMs, timestamps.toMs);
 
       assertValidResponse({ data, error }, true);
       expect(error.message).toContain("Service name is required");
@@ -236,11 +210,7 @@ describe("ApmClient", () => {
     it("should call queryMetrics with service filter", async () => {
       metricsApi.queryMetrics.mockResolvedValue({ series: [] });
 
-      await client.getServiceHealth(
-        "api",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
+      await client.getServiceHealth("api", timestamps.fromMs, timestamps.toMs);
 
       expect(metricsApi.queryMetrics).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -281,11 +251,7 @@ describe("ApmClient", () => {
         series: [{ scope: "service:api", pointlist: [[1, 1]] }],
       });
 
-      const { data } = await client.getServiceHealth(
-        "api",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
+      const { data } = await client.getServiceHealth("api", timestamps.fromMs, timestamps.toMs);
 
       expect(Array.isArray(data.requests)).toBe(true);
       expect(Array.isArray(data.errors)).toBe(true);
@@ -308,9 +274,7 @@ describe("ApmClient", () => {
   describe("getServiceDependencies", () => {
     it("should get service dependencies successfully", async () => {
       metricsApi.queryMetrics.mockResolvedValue({
-        series: [
-          { scope: "service:api", tag_set: ["env:prod"] },
-        ],
+        series: [{ scope: "service:api", tag_set: ["env:prod"] }],
       });
 
       const { data, error } = await client.getServiceDependencies(
@@ -350,11 +314,7 @@ describe("ApmClient", () => {
     it("should include service in queryMetrics", async () => {
       metricsApi.queryMetrics.mockResolvedValue({ series: [] });
 
-      await client.getServiceDependencies(
-        "api",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
+      await client.getServiceDependencies("api", timestamps.fromMs, timestamps.toMs);
 
       expect(metricsApi.queryMetrics).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -483,12 +443,9 @@ describe("ApmClient", () => {
     it("should use spansApi when querying traces with serviceName", async () => {
       spansApi.listSpansGet.mockResolvedValue({ data: tracesQueryResponse.data });
 
-      await client.queryTraces(
-        "env:prod",
-        timestamps.fromMs,
-        timestamps.toMs,
-        { serviceName: "api" }
-      );
+      await client.queryTraces("env:prod", timestamps.fromMs, timestamps.toMs, {
+        serviceName: "api",
+      });
 
       expect(spansApi.listSpansGet).toHaveBeenCalledTimes(1);
     });
@@ -613,12 +570,9 @@ describe("ApmClient", () => {
       const year2030From = 1893456000000;
       const year2030To = 1893542400000;
 
-      const { data, error } = await client.queryTraces(
-        "env:prod",
-        year2030From,
-        year2030To,
-        { serviceName: "api" }
-      );
+      const { data, error } = await client.queryTraces("env:prod", year2030From, year2030To, {
+        serviceName: "api",
+      });
 
       assertValidResponse({ data, error }, false);
     });

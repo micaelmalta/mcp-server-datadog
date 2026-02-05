@@ -59,14 +59,12 @@ const searchEventsTool = {
       },
       from: {
         oneOf: [{ type: "number" }, { type: "string" }],
-        description:
-          "Start time as Unix timestamp in seconds or ISO 8601 string",
+        description: "Start time as Unix timestamp in seconds or ISO 8601 string",
       },
       to: {
         oneOf: [{ type: "number" }, { type: "string" }],
         description:
-          "End time as Unix timestamp in seconds or ISO 8601 string " +
-          "(must be after 'from')",
+          "End time as Unix timestamp in seconds or ISO 8601 string " + "(must be after 'from')",
       },
       priority: {
         type: "string",
@@ -143,9 +141,7 @@ async function handleSearchEvents(input, client) {
           content: [
             {
               type: "text",
-              text:
-                "Error: priority must be one of: " +
-                "low, normal, high",
+              text: "Error: priority must be one of: " + "low, normal, high",
             },
           ],
         };

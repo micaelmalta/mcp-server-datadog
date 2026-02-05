@@ -74,8 +74,7 @@ export class ApmClient {
           const byTrace = {};
           for (const span of spans) {
             const attrs = span.attributes || span;
-            const traceId =
-              attrs.trace_id ?? attrs.traceId ?? span.trace_id ?? span.traceId;
+            const traceId = attrs.trace_id ?? attrs.traceId ?? span.trace_id ?? span.traceId;
             if (!traceId) continue;
             if (!byTrace[traceId]) {
               byTrace[traceId] = {
@@ -88,7 +87,10 @@ export class ApmClient {
               };
             }
             byTrace[traceId].span_count += 1;
-            if (attrs.duration != null && (byTrace[traceId].duration == null || attrs.duration > byTrace[traceId].duration)) {
+            if (
+              attrs.duration != null &&
+              (byTrace[traceId].duration == null || attrs.duration > byTrace[traceId].duration)
+            ) {
               byTrace[traceId].duration = attrs.duration;
             }
           }
@@ -174,8 +176,7 @@ export class ApmClient {
         const attrs = span.attributes || span;
         const svc = attrs.service ?? span.service ?? serviceName;
         // Spans API v2 uses resourceName; also support resource (trace view)
-        const res =
-          attrs.resourceName ?? attrs.resource ?? span.resourceName ?? span.resource;
+        const res = attrs.resourceName ?? attrs.resource ?? span.resourceName ?? span.resource;
         if (!res || typeof res !== "string") continue;
         const key = `${svc}\0${res}`;
         if (seen.has(key)) continue;
@@ -278,61 +279,63 @@ export class ApmClient {
             // try next variant
           }
         }
-          const bySpanId = {};
-          for (const s of traceSpans) {
-            const sid = ApmClient._spanAttr(s, "span_id");
-            if (sid) bySpanId[String(sid)] = s;
-          }
-          for (const s of traceSpans) {
-            const svc = ApmClient._spanAttr(s, "service") || serviceName;
-            const res =
-              ApmClient._spanAttr(s, "resource_name") ??
-              ApmClient._spanAttr(s, "resourceName") ??
-              ApmClient._spanAttr(s, "resource");
-            if (!res || typeof res !== "string") continue;
-            const sid = ApmClient._spanAttr(s, "span_id");
-            const pid = ApmClient._spanAttr(s, "parent_id");
-            if (svc !== serviceName) continue;
-            if (!HTTP_RESOURCE.test(res)) continue;
-            if (!byResource[res]) byResource[res] = { inbound: [], outbound: [] };
-            const seenIn = new Set();
-            const seenOut = new Set();
-            if (pid && bySpanId[String(pid)]) {
-              const parent = bySpanId[String(pid)];
-              const pSvc = ApmClient._spanAttr(parent, "service");
-              const pRes =
-                ApmClient._spanAttr(parent, "resource_name") ??
-                ApmClient._spanAttr(parent, "resourceName") ??
-                ApmClient._spanAttr(parent, "resource");
-              if (pSvc && pRes && HTTP_RESOURCE.test(pRes)) {
-                const key = `${pSvc}\0${pRes}`;
-                if (!seenIn.has(key)) {
-                  seenIn.add(key);
-                  byResource[res].inbound.push({ service: pSvc, resource: pRes });
-                }
-              }
-            }
-            for (const other of traceSpans) {
-              if (String(ApmClient._spanAttr(other, "parent_id")) === String(sid)) {
-                const oSvc = ApmClient._spanAttr(other, "service");
-                const oRes =
-                  ApmClient._spanAttr(other, "resource_name") ??
-                  ApmClient._spanAttr(other, "resourceName") ??
-                  ApmClient._spanAttr(other, "resource");
-                if (oSvc && oRes && HTTP_RESOURCE.test(oRes)) {
-                  const key = `${oSvc}\0${oRes}`;
-                  if (!seenOut.has(key)) {
-                    seenOut.add(key);
-                    byResource[res].outbound.push({ service: oSvc, resource: oRes });
-                  }
-                }
+        const bySpanId = {};
+        for (const s of traceSpans) {
+          const sid = ApmClient._spanAttr(s, "span_id");
+          if (sid) bySpanId[String(sid)] = s;
+        }
+        for (const s of traceSpans) {
+          const svc = ApmClient._spanAttr(s, "service") || serviceName;
+          const res =
+            ApmClient._spanAttr(s, "resource_name") ??
+            ApmClient._spanAttr(s, "resourceName") ??
+            ApmClient._spanAttr(s, "resource");
+          if (!res || typeof res !== "string") continue;
+          const sid = ApmClient._spanAttr(s, "span_id");
+          const pid = ApmClient._spanAttr(s, "parent_id");
+          if (svc !== serviceName) continue;
+          if (!HTTP_RESOURCE.test(res)) continue;
+          if (!byResource[res]) byResource[res] = { inbound: [], outbound: [] };
+          const seenIn = new Set();
+          const seenOut = new Set();
+          if (pid && bySpanId[String(pid)]) {
+            const parent = bySpanId[String(pid)];
+            const pSvc = ApmClient._spanAttr(parent, "service");
+            const pRes =
+              ApmClient._spanAttr(parent, "resource_name") ??
+              ApmClient._spanAttr(parent, "resourceName") ??
+              ApmClient._spanAttr(parent, "resource");
+            if (pSvc && pRes && HTTP_RESOURCE.test(pRes)) {
+              const key = `${pSvc}\0${pRes}`;
+              if (!seenIn.has(key)) {
+                seenIn.add(key);
+                byResource[res].inbound.push({ service: pSvc, resource: pRes });
               }
             }
           }
+          for (const other of traceSpans) {
+            if (String(ApmClient._spanAttr(other, "parent_id")) === String(sid)) {
+              const oSvc = ApmClient._spanAttr(other, "service");
+              const oRes =
+                ApmClient._spanAttr(other, "resource_name") ??
+                ApmClient._spanAttr(other, "resourceName") ??
+                ApmClient._spanAttr(other, "resource");
+              if (oSvc && oRes && HTTP_RESOURCE.test(oRes)) {
+                const key = `${oSvc}\0${oRes}`;
+                if (!seenOut.has(key)) {
+                  seenOut.add(key);
+                  byResource[res].outbound.push({ service: oSvc, resource: oRes });
+                }
+              }
+            }
+          }
+        }
       }
 
       for (const r of Object.keys(byResource)) {
-        const uniq = (arr) => [...new Map(arr.map((x) => [`${x.service}\0${x.resource}`, x]).values()).values()];
+        const uniq = (arr) => [
+          ...new Map(arr.map((x) => [`${x.service}\0${x.resource}`, x]).values()).values(),
+        ];
         byResource[r].inbound = uniq(byResource[r].inbound);
         byResource[r].outbound = uniq(byResource[r].outbound);
       }
@@ -434,7 +437,9 @@ export class ApmClient {
       const runQueries = (qList) =>
         Promise.all(
           qList.map((q) =>
-            this.metricsApi.queryMetrics({ from: fromSec, to: toSec, query: q }).catch(() => ({ series: [] }))
+            this.metricsApi
+              .queryMetrics({ from: fromSec, to: toSec, query: q })
+              .catch(() => ({ series: [] }))
           )
         );
 

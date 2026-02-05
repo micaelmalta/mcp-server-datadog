@@ -64,11 +64,7 @@ export class MetricsClient {
       const statusCode = error.statusCode ?? 500;
       return {
         data: null,
-        error: new DatadogClientError(
-          `HTTP ${statusCode}: ${error.message}`,
-          statusCode,
-          error
-        ),
+        error: new DatadogClientError(`HTTP ${statusCode}: ${error.message}`, statusCode, error),
       };
     }
   }
@@ -93,11 +89,7 @@ export class MetricsClient {
       const statusCode = error.statusCode ?? 500;
       return {
         data: null,
-        error: new DatadogClientError(
-          `HTTP ${statusCode}: ${error.message}`,
-          statusCode,
-          error
-        ),
+        error: new DatadogClientError(`HTTP ${statusCode}: ${error.message}`, statusCode, error),
       };
     }
   }
@@ -110,7 +102,7 @@ export class MetricsClient {
   async listMetrics(query = "") {
     try {
       const params = {
-        q: query || "*"
+        q: query || "*",
       };
 
       const result = await this.metricsApi.listMetrics(params);
@@ -119,11 +111,7 @@ export class MetricsClient {
       const statusCode = error.statusCode ?? 500;
       return {
         data: null,
-        error: new DatadogClientError(
-          `HTTP ${statusCode}: ${error.message}`,
-          statusCode,
-          error
-        ),
+        error: new DatadogClientError(`HTTP ${statusCode}: ${error.message}`, statusCode, error),
       };
     }
   }
@@ -155,11 +143,7 @@ export class MetricsClient {
       const statusCode = error.statusCode ?? 500;
       return {
         data: null,
-        error: new DatadogClientError(
-          `HTTP ${statusCode}: ${error.message}`,
-          statusCode,
-          error
-        ),
+        error: new DatadogClientError(`HTTP ${statusCode}: ${error.message}`, statusCode, error),
       };
     }
   }

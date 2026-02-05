@@ -6,10 +6,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { MetricsClient } from "#clients/metricsClient.js";
 import { getMetricsTools } from "#tools/metricsTools.js";
 import { mockDatadogApi } from "#test/mocks/datadogApi.js";
-import {
-  createMockConfig,
-  createTestTimestamps,
-} from "#test/helpers.js";
+import { createMockConfig, createTestTimestamps } from "#test/helpers.js";
 import { metricsQueryResponse, metricMetadataResponse } from "#test/fixtures/datadogResponses.js";
 
 describe("Metrics Tools", () => {
@@ -159,7 +156,9 @@ describe("Metrics Tools", () => {
     });
 
     it("should handle client errors", async () => {
-      metricsApi.queryMetrics.mockRejectedValue(Object.assign(new Error("Unauthorized"), { statusCode: 401 }));
+      metricsApi.queryMetrics.mockRejectedValue(
+        Object.assign(new Error("Unauthorized"), { statusCode: 401 })
+      );
       const queryTool = tools.find((t) => t.name === "query_metrics");
 
       const result = await queryTool.handler({
@@ -233,7 +232,9 @@ describe("Metrics Tools", () => {
     });
 
     it("should handle client errors", async () => {
-      metricsApi.getMetricMetadata.mockRejectedValue(Object.assign(new Error("Not found"), { statusCode: 404 }));
+      metricsApi.getMetricMetadata.mockRejectedValue(
+        Object.assign(new Error("Not found"), { statusCode: 404 })
+      );
       const metaTool = tools.find((t) => t.name === "get_metric_metadata");
 
       const result = await metaTool.handler({
@@ -337,7 +338,9 @@ describe("Metrics Tools", () => {
     });
 
     it("should handle client errors", async () => {
-      metricsApi.listMetrics.mockRejectedValue(Object.assign(new Error("Unauthorized"), { statusCode: 401 }));
+      metricsApi.listMetrics.mockRejectedValue(
+        Object.assign(new Error("Unauthorized"), { statusCode: 401 })
+      );
       const listTool = tools.find((t) => t.name === "list_metrics");
 
       const result = await listTool.handler({});
@@ -445,7 +448,9 @@ describe("Metrics Tools", () => {
 
   describe("error handling", () => {
     it("should handle exceptions in handlers", async () => {
-      metricsApi.queryMetrics.mockRejectedValue(Object.assign(new Error("Unauthorized"), { statusCode: 401 }));
+      metricsApi.queryMetrics.mockRejectedValue(
+        Object.assign(new Error("Unauthorized"), { statusCode: 401 })
+      );
       const queryTool = tools.find((t) => t.name === "query_metrics");
 
       const result = await queryTool.handler({

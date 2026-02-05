@@ -35,7 +35,7 @@ const listMonitorsTool = {
           type: "string",
         },
         description:
-          "Filter monitors by tags (e.g., [\"env:prod\", \"team:backend\"]). " +
+          'Filter monitors by tags (e.g., ["env:prod", "team:backend"]). ' +
           "Only monitors with all specified tags are returned.",
       },
     },
@@ -96,7 +96,7 @@ const searchMonitorsTool = {
         items: {
           type: "string",
         },
-        description: "Optional tag filters (e.g., [\"env:prod\", \"service:api\"])",
+        description: 'Optional tag filters (e.g., ["env:prod", "service:api"])',
       },
     },
     required: ["query"],
@@ -122,9 +122,7 @@ async function handleListMonitors(input, client) {
           content: [
             {
               type: "text",
-              text:
-                "Error: status must be one of: " +
-                "triggered, OK, degraded",
+              text: "Error: status must be one of: " + "triggered, OK, degraded",
             },
           ],
         };

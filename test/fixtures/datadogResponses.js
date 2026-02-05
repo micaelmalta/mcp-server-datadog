@@ -96,8 +96,7 @@ export const logsSearchResponse = {
     },
   ],
   links: {
-    next:
-      "https://api.datadoghq.com/api/v2/logs/events/search?page[after]=page-token-123",
+    next: "https://api.datadoghq.com/api/v2/logs/events/search?page[after]=page-token-123",
   },
   meta: {
     page: {

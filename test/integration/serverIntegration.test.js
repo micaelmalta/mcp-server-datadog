@@ -14,10 +14,7 @@ import { getEventsTools } from "#tools/eventsTools.js";
 import { getMonitorsTools } from "#tools/monitorsTools.js";
 import { getApmTools } from "#tools/apmTools.js";
 import { mockDatadogApi } from "#test/mocks/datadogApi.js";
-import {
-  createMockConfig,
-  createTestTimestamps,
-} from "#test/helpers.js";
+import { createMockConfig, createTestTimestamps } from "#test/helpers.js";
 import {
   metricsQueryResponse,
   logsSearchResponse,
@@ -29,8 +26,7 @@ import {
 describe("MCP Server Integration", () => {
   let config;
   let timestamps;
-  const { metricsApi, logsApi, eventsApi, monitorsApi, spansApi } =
-    mockDatadogApi;
+  const { metricsApi, logsApi, eventsApi, monitorsApi, spansApi } = mockDatadogApi;
 
   beforeEach(() => {
     config = createMockConfig();
@@ -300,11 +296,7 @@ describe("MCP Server Integration", () => {
       const promises = [
         metricsClient.queryMetrics("system.cpu", timestamps.from, timestamps.to),
         logsClient.searchLogs("service:api", timestamps.fromMs, timestamps.toMs),
-        eventsClient.searchEvents(
-          "priority:high",
-          timestamps.from,
-          timestamps.to
-        ),
+        eventsClient.searchEvents("priority:high", timestamps.from, timestamps.to),
       ];
 
       const results = await Promise.all(promises);
@@ -404,11 +396,7 @@ describe("MCP Server Integration", () => {
       metricsApi.queryMetrics.mockResolvedValue(metricsQueryResponse);
       const client = new MetricsClient(config);
 
-      const { data } = await client.queryMetrics(
-        "system.cpu",
-        timestamps.from,
-        timestamps.to
-      );
+      const { data } = await client.queryMetrics("system.cpu", timestamps.from, timestamps.to);
 
       expect(data.status).toBe("ok");
       expect(Array.isArray(data.series)).toBe(true);
@@ -418,11 +406,7 @@ describe("MCP Server Integration", () => {
       logsApi.listLogs.mockResolvedValue(logsSearchResponse);
       const client = new LogsClient(config);
 
-      const { data } = await client.searchLogs(
-        "service:api",
-        timestamps.fromMs,
-        timestamps.toMs
-      );
+      const { data } = await client.searchLogs("service:api", timestamps.fromMs, timestamps.toMs);
 
       expect(Array.isArray(data.data)).toBe(true);
     });
@@ -431,11 +415,7 @@ describe("MCP Server Integration", () => {
       eventsApi.listEvents.mockResolvedValue(eventsSearchResponse);
       const client = new EventsClient(config);
 
-      const { data } = await client.searchEvents(
-        "priority:high",
-        timestamps.from,
-        timestamps.to
-      );
+      const { data } = await client.searchEvents("priority:high", timestamps.from, timestamps.to);
 
       expect(Array.isArray(data.events)).toBe(true);
     });
@@ -455,12 +435,9 @@ describe("MCP Server Integration", () => {
       });
       const client = new ApmClient(config);
 
-      const { data } = await client.queryTraces(
-        "env:prod",
-        timestamps.fromMs,
-        timestamps.toMs,
-        { serviceName: "api" }
-      );
+      const { data } = await client.queryTraces("env:prod", timestamps.fromMs, timestamps.toMs, {
+        serviceName: "api",
+      });
 
       expect(data.traces).toBeDefined();
       expect(Array.isArray(data.traces)).toBe(true);

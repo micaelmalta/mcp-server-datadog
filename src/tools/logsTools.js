@@ -66,14 +66,12 @@ const searchLogsTool = {
       },
       from: {
         oneOf: [{ type: "number" }, { type: "string" }],
-        description:
-          "Start time as Unix timestamp (seconds/ms) or ISO 8601 string",
+        description: "Start time as Unix timestamp (seconds/ms) or ISO 8601 string",
       },
       to: {
         oneOf: [{ type: "number" }, { type: "string" }],
         description:
-          "End time as Unix timestamp (seconds/ms) or ISO 8601 string " +
-          "(must be after 'from')",
+          "End time as Unix timestamp (seconds/ms) or ISO 8601 string " + "(must be after 'from')",
       },
       limit: {
         type: "number",
@@ -135,13 +133,11 @@ const aggregateLogsTool = {
       },
       from: {
         oneOf: [{ type: "number" }, { type: "string" }],
-        description:
-          "Start time as Unix timestamp (seconds/ms) or ISO 8601 string",
+        description: "Start time as Unix timestamp (seconds/ms) or ISO 8601 string",
       },
       to: {
         oneOf: [{ type: "number" }, { type: "string" }],
-        description:
-          "End time as Unix timestamp (seconds/ms) or ISO 8601 string",
+        description: "End time as Unix timestamp (seconds/ms) or ISO 8601 string",
       },
       aggregationType: {
         type: "string",
@@ -221,19 +217,17 @@ async function handleSearchLogs(input, client) {
       content: [
         {
           type: "text",
-          text: JSON.stringify(
-            {
-              filter: filter || "all",
-              timeRange: {
-                from: new Date(from).toISOString(),
-                to: new Date(to).toISOString(),
-              },
-              logsCount: logs.length,
-              logs: summarizedLogs,
-              has_more: hasMore,
-              next_cursor: nextCursor,
-            }
-          ),
+          text: JSON.stringify({
+            filter: filter || "all",
+            timeRange: {
+              from: new Date(from).toISOString(),
+              to: new Date(to).toISOString(),
+            },
+            logsCount: logs.length,
+            logs: summarizedLogs,
+            has_more: hasMore,
+            next_cursor: nextCursor,
+          }),
         },
       ],
     };
@@ -299,7 +293,7 @@ async function handleGetLogDetails(input, client) {
       attributes: Object.fromEntries(
         Object.entries(data.attributes || {})
           .slice(0, 15) // Limit total attributes
-          .map(([k, v]) => [k, typeof v === 'string' ? v.substring(0, 200) : v])
+          .map(([k, v]) => [k, typeof v === "string" ? v.substring(0, 200) : v])
       ),
     };
 
@@ -361,8 +355,7 @@ async function handleAggregateLogs(input, client) {
           {
             type: "text",
             text:
-              "Error: aggregationType must be one of: " +
-              "count, avg, percentile, min, max, sum",
+              "Error: aggregationType must be one of: " + "count, avg, percentile, min, max, sum",
           },
         ],
       };
@@ -370,12 +363,7 @@ async function handleAggregateLogs(input, client) {
 
     const filter = input.filter || "";
 
-    const { data, error } = await client.aggregateLogs(
-      filter,
-      from,
-      to,
-      input.aggregationType
-    );
+    const { data, error } = await client.aggregateLogs(filter, from, to, input.aggregationType);
 
     if (error) {
       console.error("Aggregate logs error:", error);

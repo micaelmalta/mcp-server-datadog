@@ -4,10 +4,7 @@
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { getMonitorsTools } from "#tools/monitorsTools.js";
-import {
-  monitorsListResponse,
-  monitorStatusResponse,
-} from "#test/fixtures/datadogResponses.js";
+import { monitorsListResponse, monitorStatusResponse } from "#test/fixtures/datadogResponses.js";
 
 describe("Monitors Tools", () => {
   let tools;

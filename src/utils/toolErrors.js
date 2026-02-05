@@ -35,7 +35,7 @@ function getActionableHint(message, statusCode) {
     message &&
     (message.includes("must be before") ||
       message.includes("Start time") ||
-      message.includes("from") && message.includes("to"))
+      (message.includes("from") && message.includes("to")))
   ) {
     return "Ensure 'from' is before 'to'.";
   }

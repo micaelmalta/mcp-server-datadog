@@ -61,11 +61,7 @@ export class MonitorsClient {
       const statusCode = error.statusCode ?? 500;
       return {
         data: null,
-        error: new DatadogClientError(
-          `HTTP ${statusCode}: ${error.message}`,
-          statusCode,
-          error
-        ),
+        error: new DatadogClientError(`HTTP ${statusCode}: ${error.message}`, statusCode, error),
       };
     }
   }
@@ -93,11 +89,7 @@ export class MonitorsClient {
       const statusCode = error.statusCode ?? 500;
       return {
         data: null,
-        error: new DatadogClientError(
-          `HTTP ${statusCode}: ${error.message}`,
-          statusCode,
-          error
-        ),
+        error: new DatadogClientError(`HTTP ${statusCode}: ${error.message}`, statusCode, error),
       };
     }
   }
@@ -122,11 +114,7 @@ export class MonitorsClient {
       const statusCode = error.statusCode ?? 500;
       return {
         data: null,
-        error: new DatadogClientError(
-          `HTTP ${statusCode}: ${error.message}`,
-          statusCode,
-          error
-        ),
+        error: new DatadogClientError(`HTTP ${statusCode}: ${error.message}`, statusCode, error),
       };
     }
   }
@@ -156,11 +144,7 @@ export class MonitorsClient {
       const statusCode = error.statusCode ?? 500;
       return {
         data: null,
-        error: new DatadogClientError(
-          `HTTP ${statusCode}: ${error.message}`,
-          statusCode,
-          error
-        ),
+        error: new DatadogClientError(`HTTP ${statusCode}: ${error.message}`, statusCode, error),
       };
     }
   }
@@ -185,11 +169,7 @@ export class MonitorsClient {
       const statusCode = error.statusCode ?? 500;
       return {
         data: null,
-        error: new DatadogClientError(
-          `HTTP ${statusCode}: ${error.message}`,
-          statusCode,
-          error
-        ),
+        error: new DatadogClientError(`HTTP ${statusCode}: ${error.message}`, statusCode, error),
       };
     }
   }
@@ -226,11 +206,7 @@ export class MonitorsClient {
       const statusCode = error.statusCode ?? 500;
       return {
         data: null,
-        error: new DatadogClientError(
-          `HTTP ${statusCode}: ${error.message}`,
-          statusCode,
-          error
-        ),
+        error: new DatadogClientError(`HTTP ${statusCode}: ${error.message}`, statusCode, error),
       };
     }
   }

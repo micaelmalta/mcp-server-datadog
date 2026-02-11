@@ -181,7 +181,7 @@ describe("MCP Server Integration", () => {
       expect(tools).toHaveLength(3);
       expect(tools.map((t) => t.name)).toContain("query_traces");
       expect(tools.map((t) => t.name)).toContain("get_service_health");
-      expect(tools.map((t) => t.name)).toContain("get_service_dependencies");
+      expect(tools.map((t) => t.name)).toContain("get_apm_service_dependencies");
     });
 
     it("should invoke APM tool through client", async () => {

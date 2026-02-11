@@ -162,15 +162,15 @@ describe("APM Tools", () => {
     });
   });
 
-  describe("get_service_dependencies tool", () => {
-    it("should have get_service_dependencies tool", () => {
-      const depsTool = tools.find((t) => t.name === "get_service_dependencies");
+  describe("get_apm_service_dependencies tool", () => {
+    it("should have get_apm_service_dependencies tool", () => {
+      const depsTool = tools.find((t) => t.name === "get_apm_service_dependencies");
       expect(depsTool).toBeDefined();
     });
 
     it("should get service dependencies successfully", async () => {
       metricsApi.queryMetrics.mockResolvedValue({ series: [] });
-      const depsTool = tools.find((t) => t.name === "get_service_dependencies");
+      const depsTool = tools.find((t) => t.name === "get_apm_service_dependencies");
 
       const result = await depsTool.handler({
         serviceName: "api",
@@ -185,7 +185,7 @@ describe("APM Tools", () => {
     });
 
     it("should reject empty service name", async () => {
-      const depsTool = tools.find((t) => t.name === "get_service_dependencies");
+      const depsTool = tools.find((t) => t.name === "get_apm_service_dependencies");
 
       const result = await depsTool.handler({
         serviceName: "",
@@ -197,7 +197,7 @@ describe("APM Tools", () => {
     });
 
     it("should reject null service name", async () => {
-      const depsTool = tools.find((t) => t.name === "get_service_dependencies");
+      const depsTool = tools.find((t) => t.name === "get_apm_service_dependencies");
 
       const result = await depsTool.handler({
         serviceName: null,
@@ -209,7 +209,7 @@ describe("APM Tools", () => {
     });
 
     it("should reject when from >= to", async () => {
-      const depsTool = tools.find((t) => t.name === "get_service_dependencies");
+      const depsTool = tools.find((t) => t.name === "get_apm_service_dependencies");
 
       const result = await depsTool.handler({
         serviceName: "api",

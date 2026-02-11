@@ -126,15 +126,15 @@ const getServiceHealthTool = {
 };
 
 /**
- * Get Service Dependencies tool definition.
- * Retrieves the service dependency map showing how services communicate.
+ * Get APM Service Dependencies tool definition.
+ * Retrieves the service dependency map from APM traces showing how services communicate.
  * @type {Object}
  */
-const getServiceDependenciesTool = {
-  name: "get_service_dependencies",
+const getApmServiceDependenciesTool = {
+  name: "get_apm_service_dependencies",
   description:
-    "Get the service dependency map for a service, showing which services " +
-    "it calls and which services call it. Useful for understanding architecture.",
+    "Get the APM service dependency map for a service over a time range, showing which services " +
+    "it calls and which services call it based on trace data. Useful for understanding service interactions.",
   readOnlyHint: true,
   destructiveHint: false,
   idempotentHint: true,
@@ -459,7 +459,7 @@ export function getApmTools(client) {
       handler: (input) => handleGetServiceHealth(input, client),
     },
     {
-      ...getServiceDependenciesTool,
+      ...getApmServiceDependenciesTool,
       handler: (input) => handleGetServiceDependencies(input, client),
     },
   ];
